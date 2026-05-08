@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Road</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;--surface:#111;--surface2:#181818;--border:#1e1e1e;
+  --text:#b0b0b0;--dim:#484848;--bright:#d0d0d0;
+  --health:#6a3a3a;--health-bg:#1e0e0e;
+  --hunger:#6a5a3a;--hunger-bg:#1e1a0e;
+  --thirst:#3a4a6a;--thirst-bg:#0e141e;
+  --sanity:#3a6a4a;--sanity-bg:#0e1e12;
+  --danger:#7a3333;--good:#3a6a3a;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Courier Prime','Courier New',monospace;font-size:14px;line-height:1.7;overflow-x:hidden}
+.screen{display:none!important}
+.screen.active{display:flex!important}
+
+/* ── TITLE ── */
+#title-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;text-align:center;background:var(--bg)}
+#title-art{width:100%;max-width:680px;margin-bottom:32px}
+.game-title{font-family:'Special Elite',serif;font-size:clamp(52px,12vw,110px);letter-spacing:.35em;color:#a8a8a8;text-transform:uppercase;margin-bottom:6px;text-shadow:0 0 60px rgba(0,0,0,.9)}
+.game-sub{font-size:12px;letter-spacing:.5em;color:var(--dim);text-transform:uppercase;margin-bottom:52px;font-style:italic}
+#start-btn{background:transparent;border:1px solid #333;color:var(--dim);font-family:'Special Elite',serif;font-size:14px;letter-spacing:.35em;padding:14px 56px;cursor:pointer;text-transform:uppercase;transition:all .4s}
+#start-btn:hover{border-color:#666;color:var(--text)}
+
+/* ── INTRO ── */
+#intro-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 40px;background:#000}
+#intro-text{max-width:520px;font-size:16px;line-height:2.1;color:#666;font-style:italic;white-space:pre-wrap}
+
+/* ── GAME ── */
+#game-screen{flex-direction:column;min-height:100vh;max-width:980px;margin:0 auto;width:100%}
+#scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505}
+#scene-svg{width:100%;display:block;max-height:260px}
+#day-badge{position:absolute;top:12px;left:16px;font-family:'Special Elite',serif;font-size:12px;letter-spacing:.2em;color:var(--dim)}
+#weather-badge{position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase}
+#mid-row{display:grid;grid-template-columns:1fr 240px;flex:1}
+#narrative-col{padding:24px 28px;border-right:1px solid var(--border);display:flex;flex-direction:column}
+#narrative-text{font-size:14px;line-height:1.9;color:var(--text);min-height:90px;white-space:pre-wrap;flex:1;margin-bottom:20px}
+#result-text{font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid #222;padding:10px 14px;margin-bottom:16px;line-height:1.8;display:none;white-space:pre-wrap}
+#choices-list{display:flex;flex-direction:column;gap:1px}
+.choice-btn{background:transparent;border:none;border-left:2px solid #1e1e1e;color:var(--dim);font-family:'Courier Prime',monospace;font-size:13px;text-align:left;padding:9px 14px;cursor:pointer;transition:all .2s;line-height:1.5}
+.choice-btn:hover:not(.locked){border-left-color:#555;color:var(--text);background:rgba(255,255,255,.015)}
+.choice-btn.locked{opacity:.3;cursor:not-allowed}
+.req-note{font-size:10px;color:var(--danger);margin-left:4px;letter-spacing:.05em}
+#continue-btn{background:transparent;border:none;border-left:2px solid #333;color:var(--dim);font-family:'Courier Prime',monospace;font-size:12px;letter-spacing:.2em;text-align:left;padding:9px 14px;cursor:pointer;transition:all .2s;text-transform:uppercase;display:none;margin-top:8px}
+#continue-btn:hover{border-left-color:#666;color:var(--text)}
+#status-line{font-size:11px;color:var(--dim);margin-top:10px;min-height:16px;letter-spacing:.05em}
+.status-warn{color:var(--danger)!important}
+.status-ok{color:var(--good)!important}
+
+/* ── STATS ── */
+#stats-col{padding:20px 16px;background:var(--surface);display:flex;flex-direction:column;gap:0}
+.char-block{margin-bottom:16px}
+.char-block h3{font-family:'Special Elite',serif;font-size:10px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
+.stat-row{margin-bottom:8px}
+.stat-lbl{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;margin-bottom:3px}
+.stat-num{font-variant-numeric:tabular-nums}
+.bar-bg{height:3px;border-radius:2px}
+.bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.bar-bg.hp{background:var(--health-bg)}.bar-fill.hp{background:var(--health)}
+.bar-bg.hu{background:var(--hunger-bg)}.bar-fill.hu{background:var(--hunger)}
+.bar-bg.th{background:var(--thirst-bg)}.bar-fill.th{background:var(--thirst)}
+.bar-bg.sa{background:var(--sanity-bg)}.bar-fill.sa{background:var(--sanity)}
+.bar-fill.crit{animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.char-divider{height:1px;background:var(--border);margin:8px 0 16px}
+#karma-block{margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+#karma-block .klbl{font-size:10px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
+#karma-text{font-family:'Special Elite',serif;font-size:12px;color:var(--dim);font-style:italic}
+#supply-btns{margin-top:16px;display:flex;flex-direction:column;gap:4px}
+.sup-btn{background:transparent;border:1px solid #1e1e1e;color:var(--dim);font-family:'Courier Prime',monospace;font-size:11px;padding:5px 8px;cursor:pointer;text-align:left;transition:all .2s;letter-spacing:.05em}
+.sup-btn:hover:not(:disabled){border-color:#444;color:var(--text)}
+.sup-btn:disabled{opacity:.2;cursor:not-allowed}
+
+/* ── INVENTORY ── */
+#inv-bar{border-top:1px solid var(--border);padding:10px 28px;display:flex;gap:24px;align-items:center;background:var(--surface);flex-shrink:0;flex-wrap:wrap}
+.inv-lbl{font-size:10px;letter-spacing:.25em;color:var(--dim);text-transform:uppercase;margin-right:4px}
+.inv-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.inv-ct{font-family:'Special Elite',serif;font-size:14px}
+#progress-bar-wrap{margin-left:auto;display:flex;align-items:center;gap:10px}
+#prog-lbl{font-size:10px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+#prog-bar-bg{width:80px;height:2px;background:#1a1a1a;border-radius:1px}
+#prog-bar-fill{height:100%;border-radius:1px;background:#3a3a3a;transition:width .6s ease}
+
+/* ── CUTSCENE ── */
+#cutscene-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 40px;background:#050505;text-align:left}
+#cutscene-svg-wrap{width:100%;max-width:680px;margin-bottom:36px}
+#cutscene-text{max-width:540px;font-size:15px;line-height:2.1;color:#888;font-style:italic;white-space:pre-wrap}
+#cutscene-btn{margin-top:40px;background:transparent;border:none;color:var(--dim);font-family:'Courier Prime',monospace;font-size:11px;letter-spacing:.35em;cursor:pointer;text-transform:uppercase;opacity:0;transition:opacity .8s;padding:0}
+#cutscene-btn.show{opacity:1}
+#cutscene-btn:hover{color:var(--text)}
+
+/* ── DEATH ── */
+#death-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#000;text-align:center; transition: opacity 2s; opacity: 1; z-index: 100}
+#death-text{font-family:'Special Elite',serif;font-size:clamp(18px,4vw,34px);color:#3a3a3a;letter-spacing:.2em;opacity:0;transition:opacity 2.5s}
+#death-text.show{opacity:1}
+
+/* ── SUMMARY ── */
+#summary-screen{flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;padding:60px 40px;background:var(--bg);text-align:center;overflow-y:auto}
+#sum-title{font-family:'Special Elite',serif;font-size:12px;letter-spacing:.4em;color:var(--dim);text-transform:uppercase;margin-bottom:48px}
+.sum-row{display:flex;justify-content:space-between;width:300px;padding:11px 0;border-bottom:1px solid var(--border);font-size:13px}
+.sum-key{color:var(--dim);letter-spacing:.08em;text-align:left}
+.sum-val{font-family:'Special Elite',serif;color:var(--text);text-align:right}
+#ending-text{max-width:480px;margin-top:44px;font-style:italic;color:var(--dim);font-size:14px;line-height:2.1;text-align:center}
+#secret-ending{display:none;max-width:480px;margin-top:32px;font-style:italic;color:var(--dim);font-size:14px;line-height:2.2;text-align:left;padding-top:32px;border-top:1px solid var(--border)}
+#again-btn{margin-top:56px;background:transparent;border:1px solid #2a2a2a;color:var(--dim);font-family:'Special Elite',serif;font-size:13px;letter-spacing:.3em;padding:12px 40px;cursor:pointer;text-transform:uppercase;transition:all .3s}
+#again-btn:hover{border-color:#555;color:var(--text)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fi{animation:fadeIn .8s ease forwards}
+
+#ash-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+}
+
+#vignette {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9000;
+  box-shadow: inset 0 0 0 0 rgba(100,0,0,0);
+  transition: box-shadow 1s ease;
+}
+.health-low #vignette {
+  box-shadow: inset 0 0 150px 20px rgba(100,0,0,0.4);
+}
+</style>
+</head>
+<body>
+<div id="vignette"></div>
+
+<!-- TITLE -->
+<div id="title-screen" class="screen active">
+  <div id="title-art"></div>
+  <h1 class="game-title">The Road</h1>
+  <p class="game-sub">Carry the fire.</p>
+  <button id="start-btn">Begin</button>
+</div>
+
+<!-- INTRO -->
+<div id="intro-screen" class="screen">
+  <div id="intro-text"></div>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div id="scene-wrap">
+    <div id="scene-svg"></div>
+    <span id="day-badge">Day 1</span>
+    <span id="weather-badge">Overcast</span>
+  </div>
+  <div id="mid-row">
+    <div id="narrative-col">
+      <div id="narrative-text"></div>
+      <div id="result-text"></div>
+      <div id="choices-list"></div>
+      <button id="continue-btn">— continue —</button>
+      <div id="status-line"></div>
+    </div>
+    <div id="stats-col">
+      <div class="char-block">
+        <h3>The Man</h3>
+        <div class="stat-row"><div class="stat-lbl"><span>Health</span><span class="stat-num" id="m-hp-n">80</span></div><div class="bar-bg hp"><div class="bar-fill hp" id="m-hp-b" style="width:80%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Hunger</span><span class="stat-num" id="m-hu-n">70</span></div><div class="bar-bg hu"><div class="bar-fill hu" id="m-hu-b" style="width:70%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Thirst</span><span class="stat-num" id="m-th-n">70</span></div><div class="bar-bg th"><div class="bar-fill th" id="m-th-b" style="width:70%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Sanity</span><span class="stat-num" id="m-sa-n">90</span></div><div class="bar-bg sa"><div class="bar-fill sa" id="m-sa-b" style="width:90%"></div></div></div>
+      </div>
+      <div class="char-divider"></div>
+      <div class="char-block">
+        <h3>The Boy</h3>
+        <div class="stat-row"><div class="stat-lbl"><span>Health</span><span class="stat-num" id="b-hp-n">85</span></div><div class="bar-bg hp"><div class="bar-fill hp" id="b-hp-b" style="width:85%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Hunger</span><span class="stat-num" id="b-hu-n">75</span></div><div class="bar-bg hu"><div class="bar-fill hu" id="b-hu-b" style="width:75%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Thirst</span><span class="stat-num" id="b-th-n">75</span></div><div class="bar-bg th"><div class="bar-fill th" id="b-th-b" style="width:75%"></div></div></div>
+        <div class="stat-row"><div class="stat-lbl"><span>Sanity</span><span class="stat-num" id="b-sa-n">80</span></div><div class="bar-bg sa"><div class="bar-fill sa" id="b-sa-b" style="width:80%"></div></div></div>
+      </div>
+      <div id="karma-block">
+        <div class="klbl">Karma</div>
+        <div id="karma-text">Uncertain</div>
+      </div>
+      <div id="supply-btns">
+        <button class="sup-btn" id="btn-eat" onclick="useSupply('food','man')">Eat [man] ▸ food</button>
+        <button class="sup-btn" id="btn-drink" onclick="useSupply('water','man')">Drink [man] ▸ water</button>
+        <button class="sup-btn" id="btn-feed" onclick="useSupply('food','boy')">Feed boy ▸ food</button>
+        <button class="sup-btn" id="btn-water-boy" onclick="useSupply('water','boy')">Water boy ▸ water</button>
+        <button class="sup-btn" id="btn-heal-m" onclick="useSupply('medicine','man')">Heal man ▸ meds</button>
+        <button class="sup-btn" id="btn-heal-b" onclick="useSupply('medicine','boy')">Heal boy ▸ meds</button>
+      </div>
+    </div>
+  </div>
+  <div id="inv-bar">
+    <span class="inv-lbl">Supplies</span>
+    <span class="inv-item">🥫 <span class="inv-ct" id="i-food">3</span></span>
+    <span class="inv-item">💧 <span class="inv-ct" id="i-water">2</span></span>
+    <span class="inv-item">💊 <span class="inv-ct" id="i-med">1</span></span>
+    <span class="inv-item">🔫 <span class="inv-ct" id="i-ammo">6</span></span>
+    <span class="inv-item">🎇 <span class="inv-ct" id="i-flare">1</span></span>
+    <div id="progress-bar-wrap">
+      <span id="prog-lbl">To Coast</span>
+      <div id="prog-bar-bg"><div id="prog-bar-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CUTSCENE -->
+<div id="cutscene-screen" class="screen">
+  <div id="cutscene-svg-wrap"></div>
+  <div id="cutscene-text"></div>
+  <button id="cutscene-btn">— continue —</button>
+</div>
+
+<!-- DEATH -->
+<div id="death-screen" class="screen">
+  <div id="death-text"></div>
+</div>
+
+<!-- SUMMARY -->
+<div id="summary-screen" class="screen">
+  <div id="sum-title">End of the Road</div>
+  <div id="sum-stats"></div>
+  <div id="ending-text"></div>
+  <div id="secret-ending"></div>
+  <button id="again-btn" onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const G = {
+  day: 1,
+  man: {hp:80, hu:70, th:70, sa:90},
+  boy: {hp:85, hu:75, th:75, sa:80},
+  inv: {food:3, water:2, medicine:1, bullets:6, flare:1},
+  karma: 50,
+  progress: 0,
+  reachedCoast: false,
+  coastScene: false,
+  over: false,
+  deathWho: null,
+  weather: 'overcast',
+  scene: 'road',
+  usedEvents: new Set(),
+  lastEvent: null,
+  supplyUsedThisTurn: false,
+  awaitingContinue: false,
+};
+
+const clamp = (v,mn=0,mx=100) => Math.max(mn, Math.min(mx, v));
+const pct = v => clamp(Math.round(v));
+
+// ═══════════════════════════════════════════════
+//  SVG SCENES
+// ═══════════════════════════════════════════════
+function tree(x, y, s) {
+  const h = 44*s, w = 18*s;
+  return `<g transform="translate(${x},${y})" stroke="#1a1a1a" stroke-linecap="round" fill="none">
+    <line x1="0" y1="0" x2="0" y2="${-h}" stroke-width="${1.8*s}"/>
+    <line x1="0" y1="${-h*.55}" x2="${-w*.7}" y2="${-h*.88}" stroke-width="${s}"/>
+    <line x1="0" y1="${-h*.55}" x2="${w*.55}" y2="${-h*.8}" stroke-width="${s}"/>
+    <line x1="0" y1="${-h*.38}" x2="${-w*.45}" y2="${-h*.6}" stroke-width="${s*.8}"/>
+    <line x1="0" y1="${-h*.28}" x2="${w*.35}" y2="${-h*.48}" stroke-width="${s*.7}"/>
+    <line x1="0" y1="${-h*.72}" x2="${-w*.3}" y2="${-h*.95}" stroke-width="${s*.6}"/>
+  </g>`;
+}
+
+function figures(cx, by, scale=1) {
+  const s = scale;
+  return `
+  <g fill="#0e0e0e" transform="translate(${cx-14*s},${by})">
+    <circle cx="0" cy="${-30*s}" r="${4*s}"/>
+    <rect x="${-2.5*s}" y="${-26*s}" width="${5*s}" height="${15*s}" rx="${1*s}"/>
+    <line x1="${-2.5*s}" y1="${-24*s}" x2="${-8*s}" y2="${-18*s}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+    <line x1="${2.5*s}" y1="${-24*s}" x2="${9*s}" y2="${-20*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+    <line x1="${-1*s}" y1="${-11*s}" x2="${-3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+    <line x1="${1*s}" y1="${-11*s}" x2="${3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+  </g>
+  <g fill="#0e0e0e" transform="translate(${cx+12*s},${by+6*s})">
+    <circle cx="0" cy="${-22*s}" r="${3*s}"/>
+    <rect x="${-2*s}" y="${-19*s}" width="${4*s}" height="${11*s}" rx="${1*s}"/>
+    <line x1="${-2*s}" y1="${-17*s}" x2="${-6*s}" y2="${-14*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+    <line x1="${2*s}" y1="${-17*s}" x2="${5*s}" y2="${-15*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+    <line x1="${-0.5*s}" y1="${-8*s}" x2="${-2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+    <line x1="${0.5*s}" y1="${-8*s}" x2="${2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+  </g>
+  <g stroke="#0e0e0e" fill="none" transform="translate(${cx-28*s},${by-4*s})">
+    <rect x="-9" y="-12" width="18" height="9" stroke-width="1.5" rx="1"/>
+    <circle cx="-6" cy="-1" r="3.5" stroke-width="1"/>
+    <circle cx="7" cy="-1" r="3.5" stroke-width="1"/>
+    <line x1="-9" y1="-4" x2="-20" y2="-2" stroke-width="1.5"/>
+  </g>`;
+}
+
+function rain(w, h) {
+  let r = '';
+  for(let i=0;i<55;i++){
+    const x=Math.random()*w, y=Math.random()*h;
+    r += `<line x1="${x}" y1="${y}" x2="${x+1.5}" y2="${y+8}" stroke="#2e3e50" stroke-width=".7" opacity=".55"/>`;
+  }
+  return r;
+}
+
+function snow(w, h) {
+  let s = '';
+  for(let i=0;i<45;i++){
+    const x=Math.random()*w, y=Math.random()*h;
+    s += `<circle cx="${x}" cy="${y}" r="1.8" fill="#7a7a7a" opacity=".5"/>`;
+  }
+  return s;
+}
+
+function drawRoad(weather='overcast') {
+  const W=700, H=260, cx=W/2, hor=H*.44;
+  const sky = weather==='snow' ? ['#555','#7a7a7a'] : weather==='rain' ? ['#1e1e1e','#2a2a2a'] : ['#2a2a2a','#484848'];
+  const gnd = weather==='snow' ? '#444' : '#1a1a1a';
+  const road = weather==='rain' ? '#111' : '#161616';
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${sky[0]}"/><stop offset="100%" stop-color="${sky[1]}"/></linearGradient>
+    <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${gnd}"/><stop offset="100%" stop-color="#0a0a0a"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${hor}" fill="url(#sg)"/>
+  <rect x="0" y="${hor}" width="${W}" height="${H-hor}" fill="url(#gg)"/>
+  <polygon points="${cx-18},${hor} ${cx+18},${hor} ${W*.78},${H} ${W*.22},${H}" fill="${road}"/>
+  <line x1="${cx}" y1="${hor+4}" x2="${cx}" y2="${H}" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="9,13"/>`;
+  // trees
+  for(let i=0;i<5;i++){
+    const t=i/4.5, x=cx-28-t*(cx-55), y=hor+t*(H-hor), sc=.28+t*.75;
+    s += tree(x, y, sc);
+  }
+  for(let i=0;i<5;i++){
+    const t=i/4.5, x=cx+28+t*(cx-55), y=hor+t*(H-hor), sc=.28+t*.75;
+    s += tree(x, y, sc);
+  }
+  s += figures(cx, H, 1);
+  if(weather==='rain') s += rain(W,H);
+  if(weather==='snow') s += snow(W,H);
+  s += '</svg>';
+  return s;
+}
+
+function drawHouse() {
+  return `<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#222"/><stop offset="100%" stop-color="#3a3a3a"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="700" height="130" fill="url(#sg)"/>
+  <rect x="0" y="130" width="700" height="130" fill="#111"/>
+  <!-- House silhouette -->
+  <polygon points="250,70 350,20 450,70" fill="#1a1a1a" stroke="#111" stroke-width="1"/>
+  <rect x="255" y="70" width="190" height="100" fill="#141414" stroke="#111"/>
+  <!-- Broken window -->
+  <rect x="290" y="90" width="40" height="35" fill="#0a0a0a" stroke="#222"/>
+  <line x1="290" y1="90" x2="330" y2="125" stroke="#111" stroke-width="1"/>
+  <!-- Door open -->
+  <rect x="355" y="120" width="35" height="50" fill="#080808"/>
+  <!-- Chimney -->
+  <rect x="340" y="25" width="16" height="28" fill="#1a1a1a"/>
+  <!-- Ground debris -->
+  <line x1="200" y1="170" x2="260" y2="170" stroke="#1e1e1e" stroke-width="2"/>
+  <line x1="430" y1="168" x2="510" y2="170" stroke="#1e1e1e" stroke-width="2"/>
+  <!-- Small figures -->
+  ${figures(220, 200, .8)}
+  </svg>`;
+}
+
+function drawBunker() {
+  return `<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="700" height="260" fill="#0d0d0d"/>
+  <rect x="0" y="130" width="700" height="130" fill="#111"/>
+  <!-- concrete slab -->
+  <rect x="240" y="80" width="220" height="30" fill="#1e1e1e" stroke="#2a2a2a" stroke-width="1"/>
+  <!-- hatch opening -->
+  <rect x="300" y="108" width="100" height="80" fill="#060606"/>
+  <!-- ladder rungs -->
+  <line x1="320" y1="115" x2="380" y2="115" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="320" y1="128" x2="380" y2="128" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="320" y1="141" x2="380" y2="141" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="320" y1="154" x2="380" y2="154" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="318" y1="113" x2="318" y2="185" stroke="#1a1a1a" stroke-width="1.5"/>
+  <line x1="382" y1="113" x2="382" y2="185" stroke="#1a1a1a" stroke-width="1.5"/>
+  <!-- glow from below -->
+  <rect x="300" y="108" width="100" height="80" fill="rgba(60,40,20,0.15)"/>
+  <!-- figure looking down -->
+  ${figures(250, 165, .85)}
+  </svg>`;
+}
+
+function drawRiver() {
+  return `<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a2a2a"/><stop offset="100%" stop-color="#3a3a3a"/></linearGradient>
+    <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e2a2a"/><stop offset="100%" stop-color="#151e1e"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="700" height="120" fill="url(#sg)"/>
+  <rect x="0" y="120" width="700" height="50" fill="url(#wg)"/>
+  <rect x="0" y="170" width="700" height="90" fill="#141414"/>
+  <!-- water ripples -->
+  <path d="M 0 135 Q 88 130 175 135 Q 262 140 350 135 Q 437 130 525 135 Q 612 140 700 135" stroke="#252e2e" stroke-width="1" fill="none"/>
+  <path d="M 0 150 Q 88 145 175 150 Q 262 155 350 150 Q 437 145 525 150 Q 612 155 700 150" stroke="#202828" stroke-width="1" fill="none"/>
+  <!-- bank trees -->
+  ${tree(80, 170, 1.1)} ${tree(120, 172, .9)} ${tree(580, 171, 1.0)} ${tree(610, 169, .85)}
+  <!-- figures at riverbank -->
+  ${figures(300, 180, .9)}
+  </svg>`;
+}
+
+function drawBeach() {
+  return `<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2e2e2e"/><stop offset="100%" stop-color="#484848"/></linearGradient>
+    <linearGradient id="se" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e2424"/><stop offset="100%" stop-color="#141818"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="700" height="145" fill="url(#sk)"/>
+  <rect x="0" y="140" width="700" height="75" fill="url(#se)"/>
+  <rect x="0" y="210" width="700" height="50" fill="#161414"/>
+  <!-- horizon -->
+  <line x1="0" y1="145" x2="700" y2="145" stroke="#3a3a3a" stroke-width="1"/>
+  <!-- waves -->
+  <path d="M 0 158 Q 88 153 175 158 Q 262 163 350 158 Q 437 153 525 158 Q 612 163 700 158" stroke="#2a3030" stroke-width="1.2" fill="none"/>
+  <path d="M 0 172 Q 88 167 175 172 Q 262 177 350 172 Q 437 167 525 172 Q 612 177 700 172" stroke="#252a2a" stroke-width="1" fill="none"/>
+  <!-- foam line -->
+  <path d="M 0 210 Q 175 205 350 210 Q 525 215 700 210" stroke="#2a2a2a" stroke-width="1.5" fill="none"/>
+  <!-- figures looking at sea -->
+  <g fill="#151515" transform="translate(310,218)">
+    <circle cx="0" cy="-30" r="4.5"/>
+    <rect x="-3" y="-26" width="6" height="15" rx="1"/>
+    <line x1="-3" y1="-24" x2="-9" y2="-18" stroke="#151515" stroke-width="2"/>
+    <line x1="3" y1="-24" x2="9" y2="-20" stroke="#151515" stroke-width="1.5"/>
+    <line x1="-1" y1="-11" x2="-3" y2="0" stroke="#151515" stroke-width="2"/>
+    <line x1="1" y1="-11" x2="3" y2="0" stroke="#151515" stroke-width="2"/>
+  </g>
+  <g fill="#151515" transform="translate(328,224)">
+    <circle cx="0" cy="-22" r="3.5"/>
+    <rect x="-2" y="-19" width="4" height="11" rx="1"/>
+    <line x1="-2" y1="-17" x2="-6" y2="-13" stroke="#151515" stroke-width="1.5"/>
+    <line x1="2" y1="-17" x2="5" y2="-14" stroke="#151515" stroke-width="1.5"/>
+    <line x1="-0.5" y1="-8" x2="-2" y2="0" stroke="#151515" stroke-width="1.5"/>
+    <line x1="0.5" y1="-8" x2="2" y2="0" stroke="#151515" stroke-width="1.5"/>
+  </g>
+  </svg>`;
+}
+
+function drawTitle() {
+  return `<svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#111"/><stop offset="100%" stop-color="#1e1e1e"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="700" height="240" fill="url(#tg)"/>
+  <!-- Long road to horizon -->
+  <rect x="0" y="120" width="700" height="120" fill="#111"/>
+  <polygon points="335,120 365,120 580,240 120,240" fill="#0d0d0d"/>
+  <line x1="350" y1="123" x2="350" y2="240" stroke="#181818" stroke-width="1" stroke-dasharray="10,14"/>
+  <!-- many distant trees -->
+  ${[60,130,190,240,285,325,375,415,460,520,580,640].map((x,i)=>tree(x, 120+Math.random()*10, .2+Math.random()*.15)).join('')}
+  <!-- tiny figures far away -->
+  <g fill="#151515" transform="translate(345,215)">
+    <circle cx="0" cy="-10" r="1.5"/>
+    <rect x="-1" y="-9" width="2" height="5" rx=".5"/>
+    <line x1="-1" y1="-8" x2="-3" y2="-6" stroke="#151515" stroke-width=".8"/>
+    <line x1="1" y1="-8" x2="3" y2="-7" stroke="#151515" stroke-width=".8"/>
+    <line x1="-.5" y1="-4" x2="-1" y2="0" stroke="#151515" stroke-width=".8"/>
+    <line x1=".5" y1="-4" x2="1" y2="0" stroke="#151515" stroke-width=".8"/>
+  </g>
+  <!-- ash overlay -->
+  <rect x="0" y="0" width="700" height="240" fill="rgba(0,0,0,.3)"/>
+  </svg>`;
+}
+
+function getSceneSVG() {
+  if (G.scene === 'house') return drawHouse();
+  if (G.scene === 'bunker') return drawBunker();
+  if (G.scene === 'river') return drawRiver();
+  if (G.scene === 'beach') return drawBeach();
+  return drawRoad(G.weather);
+}
+
+// ═══════════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════════
+const EVENTS = [
+  {
+    id:'arrow_shot', weight:5, progress:1,
+    condition: g => g.reachedCoast && g.progress > 85,
+    narrative:`A sudden sharp sound. The man staggered and fell. An arrow in his leg.\n\nSomeone was moving in the ruins of a house above the road. The boy screamed.`,
+    choices:[
+      {text:'Shoot back with the flare pistol.', req:'flare',
+       apply(g){g.man.hp=clamp(g.man.hp-40);g.karma-=10;g.progress+=1;
+         this._r=`You fire the flare into the window. A man screams. The house catches fire quickly in the dry air. You pull the arrow out but the bleeding is bad.`},
+       get result(){return this._r||'...'}
+      },
+      {text:'Shoot back with the pistol.', req:'bullets',
+       apply(g){g.inv.bullets--;g.man.hp=clamp(g.man.hp-40);g.karma-=5;g.progress+=1;
+         this._r=`You fire twice into the window. The movement stops. You break the arrow shaft off. You are losing a lot of blood.`},
+       get result(){return this._r||'...'}
+      },
+      {text:'Hide and bandage it.',
+       apply(g){g.man.hp=clamp(g.man.hp-50);g.boy.sa=clamp(g.boy.sa-15);g.progress+=1;
+         this._r=`You drag yourself behind a wall. The boy wraps the leg with a dirty cloth. The archer does not pursue, but you are very weak.`},
+       get result(){return this._r||'...'}
+      }
+    ]
+  },
+  {
+    id:'coke_can', weight:1, progress:3,
+    narrative:`Half-buried in the ash at the roadside. A cola can, still sealed.\n\nPapa. The boy was already beside it.`,
+    choices:[
+      {text:'Give it to the boy.',
+       apply(g){g.boy.sa=clamp(g.boy.sa+18);g.boy.hu=clamp(g.boy.hu+6);g.karma+=6},
+       result:`You brush it clean and open it for him. He drinks slowly, eyes wide over the rim.\n\n"It's so good, Papa."\n\nHe is right. It is.`},
+      {text:'Drink it yourself.',
+       apply(g){g.man.sa=clamp(g.man.sa+10);g.man.hu=clamp(g.man.hu+6)},
+       result:`You drink it standing in the ash-gray road. It is sweet and cold and real. You feel something that might have been happiness once.`},
+      {text:'Leave it. Could be a trap.',
+       apply(g){g.man.sa=clamp(g.man.sa-5)},
+       result:`You pull the boy away. He looks back once. You keep walking.`}
+    ]
+  },
+  {
+    id:'canned_goods', weight:3, progress:4,
+    narrative:`A grocery cart on its side in the ditch, half-sunk in ash. Three cans of something. One is swollen. You leave that one.`,
+    choices:[
+      {text:'Take the two good cans. (+2 food)',
+       apply(g){g.inv.food+=2;g.progress+=2},
+       result:`You put them in the cart. They clank together as you walk. It is enough for now.`},
+      {text:'Search the store nearby.',
+       apply(g){
+         if(Math.random()>.45){g.inv.food+=3;g.inv.water+=1;g.progress+=1;
+           this._r=`The store has been picked clean but you find three more cans behind a collapsed shelf. A sealed water bottle. You take them all.`}
+         else{g.man.th=clamp(g.man.th-8);g.boy.th=clamp(g.boy.th-6);
+           this._r=`You spend an hour searching. It is empty. Completely empty. The light is getting thin when you finally give up.`}
+       },
+       get result(){return this._r||'...'}}
+    ]
+  },
+  {
+    id:'stranger_road', weight:2, progress:2,
+    narrative:`A man ahead, standing in the road. He is thin as wire. He does not look threatening but you have learned not to trust that.\n\n"Please," he says. "I haven't eaten."`,
+    choices:[
+      {text:'Give him some food. (costs 1 food)', req:'food',
+       apply(g){g.inv.food--;g.karma+=12},
+       result:`You hand him a can. He holds it with both hands and looks at it a long time.\n\n"God bless you," he says.\n\nYou nod and walk on. The boy watches him until he disappears.`},
+      {text:'Give him water only. (costs 1 water)', req:'water',
+       apply(g){g.inv.water--;g.karma+=6},
+       result:`You offer the water. He drinks without lowering it. You wait. The boy stands beside you.\n\nWhen he is done he hands it back and walks away without speaking.`},
+      {text:'Keep moving.',
+       apply(g){g.karma-=10;g.boy.sa=clamp(g.boy.sa-8)},
+       result:`You push the cart past him. He says nothing more.\n\n"Papa," the boy says.\n\n"I know," you say. "I know."`}
+    ]
+  },
+  {
+    id:'burned_town', weight:2, progress:5, scene:'road',
+    narrative:`The town had been something once. Now it was cinders and collapsed walls. Ash in the streets ankle deep. The boy held your hand.\n\n"Did people live here, Papa?"\n\n"Yes."\n\n"Where did they go?"`,
+    choices:[
+      {text:`"We don't know. Keep walking."`,
+       apply(g){g.man.sa=clamp(g.man.sa-6);g.boy.sa=clamp(g.boy.sa-8);g.progress+=3},
+       result:`You walk through without stopping. Neither of you speaks again for a long time.`},
+      {text:'Search the ruins for supplies.',
+       apply(g){
+         const r=Math.random();
+         if(r>.6){g.inv.food+=2;this._r=`Among the wreckage, a sealed metal box. Inside: two cans of soup, a box of crackers. You take them quickly and go.`}
+         else if(r>.3){g.inv.water+=1;this._r=`A case of bottled water beneath a collapsed shelf. Most are broken. One intact. You take it.`}
+         else{g.man.hp=clamp(g.man.hp-8);this._r=`A floor gives way. You catch yourself but something tears in your shoulder. The boy helps you up. You find nothing.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Move through quickly.',
+       apply(g){g.progress+=6;g.man.th=clamp(g.man.th-5);g.boy.th=clamp(g.boy.th-4)},
+       result:`You don't stop. The ruins fall behind you. You don't look back.`}
+    ]
+  },
+  {
+    id:'dead_camp', weight:2, progress:3,
+    narrative:`Someone's camp, abandoned not long ago. Ash still warm in the ring of stones. A sleeping bag torn open. Cans, mostly empty.`,
+    choices:[
+      {text:'Search carefully.',
+       apply(g){
+         const r=Math.random();
+         if(r>.5){g.inv.food+=2;g.inv.water+=1;this._r=`Two cans they missed. A half-full water container. You fill your bottles and take the cans.`}
+         else{g.inv.food+=1;this._r=`One can of chickpeas behind a rock. Not much. But something.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Leave it. Keep moving.',
+       apply(g){g.progress+=4},
+       result:`Whatever was here is gone. You push on south.`}
+    ]
+  },
+  {
+    id:'rain_begins', weight:2, progress:2,
+    narrative:`The sky darkens to the color of iron. Then the rain comes, cold and steady, plastering your clothes to your skin.\n\nThe boy shivers.`,
+    choices:[
+      {text:'Take shelter under an overpass.',
+       apply(g){g.weather='rain';g.man.hp=clamp(g.man.hp+6);g.boy.hp=clamp(g.boy.hp+6);g.man.th=clamp(g.man.th+12);g.boy.th=clamp(g.boy.th+12)},
+       result:`You huddle under the concrete, out of the worst of it. The water collects in the tarp and you drink. The boy sleeps eventually.`},
+      {text:'Push through the rain.',
+       apply(g){g.weather='rain';g.progress+=4;g.man.hp=clamp(g.man.hp-10);g.boy.hp=clamp(g.boy.hp-8);g.man.th=clamp(g.man.th+8);g.boy.th=clamp(g.boy.th+7)},
+       result:`You walk through it. Cold to the bone. The water runs down your collar. You collect what you can in bottles as you walk.`}
+    ]
+  },
+  {
+    id:'snow_begins', weight:1.5, progress:1,
+    narrative:`Snow. Coming down hard and fast, filling the road, muffling every sound. The boy watches it fall.\n\n"It's pretty, Papa."\n\nYou don't say anything.`,
+    choices:[
+      {text:'Camp early. Wait it out.',
+       apply(g){g.weather='snow';g.man.hp=clamp(g.man.hp+8);g.boy.hp=clamp(g.boy.hp+8);g.man.hu=clamp(g.man.hu-8);g.boy.hu=clamp(g.boy.hu-7)},
+       result:`You make camp beneath a rock overhang. Small fire. The boy watches the snow. In the morning it has passed.`},
+      {text:'Keep walking. South.',
+       apply(g){g.weather='snow';g.progress+=3;g.man.hp=clamp(g.man.hp-12);g.boy.hp=clamp(g.boy.hp-10);g.man.sa=clamp(g.man.sa-8)},
+       result:`You walk until you cannot see your feet. The boy holds the back of your coat. You stop when it becomes dangerous. You are very cold.`}
+    ]
+  },
+  {
+    id:'body_road', weight:2, progress:2,
+    narrative:`A body in the ditch. Male. Dead some time. You steer the cart to the far side of the road.\n\n"Don't look," you tell the boy.\n\n"I'm not," he says. But he is.`,
+    choices:[
+      {text:'Search the body. Someone has to.',
+       apply(g){
+         g.karma-=5;g.man.sa=clamp(g.man.sa-8);
+         const r=Math.random();
+         if(r>.5){g.inv.bullets+=2;this._r=`Cartridges in the coat pocket. Two rounds. You take them and don't look at the face.`}
+         else{this._r=`Nothing. They had nothing left.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Keep walking.',
+       apply(g){g.progress+=3;g.man.sa=clamp(g.man.sa-4)},
+       result:`You keep walking. You've seen worse. That is the truth of this road.`}
+    ]
+  },
+  {
+    id:'good_guys', weight:1, progress:3,
+    narrative:`That night by the fire the boy asked the question he always asked.\n\n"Are we the good guys, Papa?"\n\n"Yes."\n\n"And we always will be?"\n\n"Yes. We will."`,
+    choices:[
+      {text:'"We carry the fire."',
+       apply(g){g.boy.sa=clamp(g.boy.sa+15);g.man.sa=clamp(g.man.sa+10);g.karma+=5},
+       result:`He thought about this.\n\n"The fire is real, isn't it, Papa."\n\n"Yes it is."\n\n"Okay."`,
+       },
+      {text:`"Don't ask questions like that."`,
+       apply(g){g.boy.sa=clamp(g.boy.sa-10);g.man.sa=clamp(g.man.sa-5)},
+       result:`He went quiet. Stared at the fire. You watched the darkness at the edge of the circle of light and did not sleep for a long time.`}
+    ]
+  },
+  {
+    id:'bad_men', weight:2, progress:0,
+    narrative:`Men on the road ahead. Four of them. They have not seen you yet. They carry weapons and their posture says what they are.`,
+    choices:[
+      {text:'Hide in the treeline. Wait.',
+       apply(g){g.man.sa=clamp(g.man.sa-10);g.boy.sa=clamp(g.boy.sa-8);g.man.th=clamp(g.man.th-5);g.boy.th=clamp(g.boy.th-4)},
+       result:`You drag the cart off-road and lie still in the dead bracken. The boy barely breathes. They pass within thirty feet.\n\nOne of them laughs at something. You wait an hour after they disappear.`},
+      {text:'Turn back and find another route.',
+       apply(g){g.progress-=3;g.man.hu=clamp(g.man.hu-8);g.boy.hu=clamp(g.boy.hu-6)},
+       result:`You backtrack two miles in silence. Find a farm track heading south. It costs you a day.`},
+      {text:'Confront them. You have bullets.', req:'bullets',
+       apply(g){
+         if(g.inv.bullets>=4 && Math.random()>.4){
+           g.inv.bullets-=3;g.karma-=15;g.progress+=2;
+           this._r=`They scatter when you raise the pistol. One runs. You fire twice into the air. They do not come back.\n\nThe boy is shaking. "Are we still good guys, Papa?"\n\nYou don't answer.`;
+         } else {
+           g.man.hp=clamp(g.man.hp-30);g.inv.bullets=0;g.karma-=5;
+           this._r=`It goes badly. You drive them off but you are hurt. The pistol is empty. You lie in the road while the boy tries to help you up.`;
+         }
+       },
+       get result(){return this._r||'...'}}
+    ]
+  },
+  {
+    id:'nightmare', weight:1.5, progress:2,
+    narrative:`In the dream she was there. She stood in a light he could not name and looked at him the way she used to. Then she was gone.\n\nHe woke in the cold with his hand on the boy's chest, counting heartbeats.`,
+    choices:[
+      {text:`Lie still. Try to remember her face.`,
+       apply(g){g.man.sa=clamp(g.man.sa-10);g.man.hp=clamp(g.man.hp-4)},
+       result:`He could not. The face would not come. There was only the gray world and the sound of the boy's breathing and the dark.`},
+      {text:`Get up. Start the fire. Make breakfast.`,
+       apply(g){g.man.sa=clamp(g.man.sa+5);g.man.hu=clamp(g.man.hu-10);g.boy.hu=clamp(g.boy.hu-8);g.progress+=2},
+       result:`You work in the dark, hands moving by feel. By the time the boy wakes there is something warm for him. He eats without asking what you dreamed.`}
+    ]
+  },
+  {
+    id:'child_shoe', weight:1, progress:3,
+    narrative:`A single child's shoe on the road. Small. Red once, maybe. The boy looks at it.\n\n"Should we bury it?"\n\nYou look at the road ahead, the road behind.`,
+    choices:[
+      {text:'"Yes. We should."',
+       apply(g){g.karma+=8;g.boy.sa=clamp(g.boy.sa+8);g.man.sa=clamp(g.man.sa-6)},
+       result:`You scrape a small hole in the ash with your boot. Lay the shoe in it. Cover it.\n\nThe boy says something you don't quite hear. A prayer of some kind. You don't ask him to repeat it.`},
+      {text:`Keep walking.`,
+       apply(g){g.boy.sa=clamp(g.boy.sa-8);g.man.sa=clamp(g.man.sa-5)},
+       result:`You walk past it. The boy looks back twice.\n\nYou understand why you had to. You understand it is still wrong.`}
+    ]
+  },
+  {
+    id:'stray_dog', weight:1, progress:2,
+    narrative:`The boy grabbed your arm.\n\n"Papa. A dog."\n\nA thin gray dog, keeping pace at the edge of the road. It looked at them with pale eyes.`,
+    choices:[
+      {text:'"We can\'t feed a dog."',
+       apply(g){g.boy.sa=clamp(g.boy.sa-15);g.man.sa=clamp(g.man.sa-5);g.karma-=5;g.progress+=3},
+       result:`The boy watched it until it fell behind.\n\n"Maybe someone else will take it in," he said.\n\nYou didn't answer. There was no one else.`},
+      {text:'Give it something to eat.',
+       apply(g){
+         if(g.inv.food>0){g.inv.food--;g.boy.sa=clamp(g.boy.sa+10);g.karma+=8;
+           this._r=`The boy fed it from his hand. It ate carefully, like something that had been hurt for showing need. Then it trotted ahead, looking back at them.\n\nIt was gone by morning but the boy smiled all day.`}
+         else{g.boy.sa=clamp(g.boy.sa-5);
+           this._r=`You had nothing to give. The dog watched you with those pale eyes and then turned and disappeared into the gray trees.`}
+       },
+       get result(){return this._r||'...'}}
+    ]
+  },
+  {
+    id:'help_ditch', weight:2, progress:2,
+    narrative:`A voice from the ditch. Weak.\n\n"Help me. Please."\n\nYou stop the cart. The boy looks at you. You look at the road.`,
+    choices:[
+      {text:'Help them.', reqStat:{char:'man',stat:'sa',min:40},
+       reqNote:'(requires sanity ≥ 40)',
+       apply(g){
+         g.karma+=18;g.man.sa=clamp(g.man.sa-8);
+         const r=Math.random();
+         if(r>.5){g.inv.medicine++;this._r=`An old woman. Fallen from the road. You get her upright. She has a small pack.\n\n"Take it," she says. "I won't need it where I'm going."\n\nThere is medicine in it. You take it because the boy is watching and he needs to see that sometimes this is what happens.`}
+         else{this._r=`A man, badly hurt. You stay with him an hour. There is nothing you can do. When you leave he is still alive.\n\nThe boy holds your hand the rest of the afternoon.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Keep moving.',
+       apply(g){g.karma-=12;g.boy.sa=clamp(g.boy.sa-14);g.man.sa=clamp(g.man.sa-8)},
+       result:`The voice fades behind you.\n\n"Papa—"\n\n"I know."\n\n"But—"\n\n"I know what I did."\n\nYou don't stop. You don't look back. That is all you can tell me.`}
+    ]
+  },
+  {
+    id:'house_search', weight:2, progress:1, scene:'house',
+    narrative:`An old farmhouse, set back from the road. White paint gone gray. Shutters hanging. The front door open.\n\n"Stay close," you tell the boy. "Don't touch anything until I check it."`,
+    choices:[
+      {text:'Search the cellar.',
+       apply(g){
+         g.scene='house';const r=Math.random();
+         if(r>.35){g.inv.food+=3;g.inv.water+=1;this._r=`Mason jars on a shelf. Preserved vegetables, old but sealed. Water in a clay crock, still clean. You fill your containers and load the jars carefully. The boy carries three of them.`}
+         else{g.man.hp=clamp(g.man.hp-15);this._r=`You fall through rotten floorboards. The boy hauls you out. You spend the afternoon resting, shaking, while he sits beside you.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Search upstairs.',
+       apply(g){
+         g.scene='house';const r=Math.random();
+         if(r>.5){g.inv.medicine++;g.inv.food+=1;this._r=`A medicine cabinet: aspirin, gauze, antiseptic. Useful. A can of soup that was somehow missed.`}
+         else{g.man.sa=clamp(g.man.sa-12);this._r=`Someone died in the bedroom. A long time ago. You look away and come back downstairs.\n\n"Papa? Did you find anything?"\n\n"No," you say. "Nothing here."`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Too dangerous. Keep moving.',
+       apply(g){g.scene='road';g.progress+=4},
+       result:`You push the cart past. The boy looks at it over his shoulder. You both know there might have been something inside.`}
+    ]
+  },
+  {
+    id:'bunker_find', weight:1, progress:0, scene:'bunker',
+    narrative:`A concrete panel in the hillside, half-hidden by fallen branches. A handle.\n\nYou look at the boy. He looks at you.\n\n"Papa."`,
+    choices:[
+      {text:'Open it.',
+       apply(g){
+         g.scene='bunker';g.inv.food+=8;g.inv.water+=4;g.inv.medicine+=2;g.man.hp=clamp(g.man.hp+15);g.boy.hp=clamp(g.boy.hp+15);
+         g.man.hu=clamp(g.man.hu+25);g.boy.hu=clamp(g.boy.hu+25);g.man.th=clamp(g.man.th+20);g.boy.th=clamp(g.boy.th+20);
+         g.man.sa=clamp(g.man.sa+20);g.boy.sa=clamp(g.boy.sa+25);g.karma+=5;
+       },
+       result:`A fallout shelter.\n\nShelves of canned food, some rusted through but most intact. Sealed water containers. Blankets. A first aid kit.\n\nYou sit on the floor and the boy laughs—actually laughs—at something, you don't know what. You stay two days.`},
+      {text:'Leave it. Might be occupied.',
+       apply(g){g.scene='road';g.progress+=3;g.man.sa=clamp(g.man.sa-5)},
+       result:`You pull the branches back over it and push on. That night you lie awake thinking about what might have been inside.`}
+    ]
+  },
+  {
+    id:'river_cross', weight:1.5, progress:2, scene:'river',
+    narrative:`The river. Dark water moving fast. The bridge is out—rusted girders collapsed into the current.\n\nYou stand on the bank with the cart and think.`,
+    choices:[
+      {text:'Wade across carefully.',
+       apply(g){
+         g.scene='river';const r=Math.random();
+         if(r>.4){g.progress+=3;g.man.th=clamp(g.man.th+10);g.boy.th=clamp(g.boy.th+8);
+           this._r=`Cold. The current stronger than it looked. You carry the boy on your back, drag the cart. You make the far bank coughing and shaking. But across.`}
+         else{g.man.hp=clamp(g.man.hp-20);g.inv.food=Math.max(0,g.inv.food-1);
+           this._r=`The current takes you off your feet. You lose a can from the cart. Claw to the bank. The boy is screaming your name from the water's edge. You get back. Try again, slower.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Follow the bank for a crossing.',
+       apply(g){g.scene='road';g.progress+=1;g.man.th=clamp(g.man.th-10);g.boy.th=clamp(g.boy.th-8)},
+       result:`A mile upstream you find a narrow shallows. You cross without incident. It costs you most of a day.`}
+    ]
+  },
+  {
+    id:'boy_sick', weight:2, progress:1,
+    narrative:`He woke in the night coughing. A deep, rattling sound. He was shivering despite two blankets and you held him and counted his breaths until dawn.`,
+    choices:[
+      {text:'Use the medicine on him.', req:'medicine',
+       apply(g){g.inv.medicine--;g.boy.hp=clamp(g.boy.hp+25);g.boy.sa=clamp(g.boy.sa+8);g.karma+=8},
+       result:`You give him half the bottle. By midday the coughing has eased. He sleeps deeply in the afternoon while you watch the road.\n\nHe's going to be all right.`},
+      {text:'Rest for the day. Keep him warm.',
+       apply(g){g.boy.hp=clamp(g.boy.hp+10);g.man.hu=clamp(g.man.hu-10);g.boy.hu=clamp(g.boy.hu-8)},
+       result:`You make a fire and keep it going all day. Feed him small amounts. He is better by evening but the cough lingers. You watch him sleep and hold the pistol in your lap.`},
+      {text:"Keep moving. He'll walk it off.",
+       apply(g){g.boy.hp=clamp(g.boy.hp-12);g.boy.sa=clamp(g.boy.sa-10);g.karma-=8},
+       result:`You walk through it. He doesn't complain. That is the worst part.`}
+    ]
+  },
+  {
+    id:'man_injured', weight:2, progress:1,
+    narrative:`Something in your hip gives way in the afternoon. An old injury, come back. You limp badly. The boy takes the cart.\n\n"I can push it, Papa."`,
+    choices:[
+      {text:'Accept his help. Rest tomorrow.',
+       apply(g){g.man.hp=clamp(g.man.hp+8);g.boy.sa=clamp(g.boy.sa+10);g.karma+=5;g.progress-=1},
+       result:`You let him. It is one of the hardest things you've done. He pushes without complaint, smaller than the cart, legs working steadily south.`},
+      {text:'Use medicine. Push through.',req:'medicine',
+       apply(g){g.inv.medicine--;g.man.hp=clamp(g.man.hp+20);g.progress+=3},
+       result:`Painkillers. Not the right kind but any port. You walk six more hours on will alone.`},
+      {text:'Push through without medicine.',
+       apply(g){g.man.hp=clamp(g.man.hp-18);g.progress+=2},
+       result:`Gritted teeth. One foot then the other. The boy doesn't say anything. He holds your elbow going down the hills.`}
+    ]
+  },
+  {
+    id:'quiet_night', weight:2, progress:2,
+    narrative:`A quiet night. The fire burning low. The boy asleep, his face relaxed in a way it never was when he was awake.\n\nYou watch him and try to remember the world before.`,
+    choices:[
+      {text:`Keep watch. Sleep can wait.`,
+       apply(g){g.man.hp=clamp(g.man.hp-8);g.man.sa=clamp(g.man.sa+12);g.boy.hp=clamp(g.boy.hp+6)},
+       result:`You don't sleep. The world stays quiet.\n\nIn the morning you are very tired but the boy is rested and he talks most of the day about things he half-remembers and things he's made up and you can't always tell which is which.`},
+      {text:`Sleep. You need it.`,
+       apply(g){g.man.hp=clamp(g.man.hp+14);g.man.sa=clamp(g.man.sa+8)},
+       result:`You sleep deeply. No dreams. In the morning the world is the same world but you are more yourself in it.`}
+    ]
+  },
+  {
+    id:'old_orchard', weight:1.5, progress:3,
+    narrative:`An old orchard, dead trees in rows. All dead. But beneath one tree—a root cellar, almost buried.\n\nThe door is rotted through.`,
+    choices:[
+      {text:'Dig it out and look inside.',
+       apply(g){
+         const r=Math.random();
+         if(r>.4){g.inv.food+=3;g.inv.water+=2;this._r=`Jars. Jams and preserves, old but hermetically sealed. You don't question it. You load what you can carry and push on with something close to gratitude.`}
+         else{g.man.sa=clamp(g.man.sa-10);this._r=`Someone else's ruin. Old bones. A child's coat folded carefully in the corner. You close the door and don't tell the boy what you found.`}
+       },
+       get result(){return this._r||'...'}},
+      {text:'Move on.',
+       apply(g){g.progress+=4},
+       result:`You keep walking. The orchard falls behind. A gray sky. A gray road. The boy counting his steps again.`}
+    ]
+  },
+  {
+    id:'man_alone', weight:1.5, progress:2,
+    narrative:`An old man sitting in a lawn chair at the side of the road. Just sitting there. As if waiting for a bus that was never coming.`,
+    choices:[
+      {text:'Stop. Speak to him.',
+       apply(g){g.man.sa=clamp(g.man.sa+6);g.boy.sa=clamp(g.boy.sa+10);g.karma+=8;g.progress-=1},
+       result:`He said his name was Ely. You sat with him an hour. He said strange things and true things and you weren't always sure which was which.\n\nWhen you left the boy looked back at him three times.`},
+      {text:'Give him something and keep moving.', req:'food',
+       apply(g){g.inv.food--;g.karma+=10;g.boy.sa=clamp(g.boy.sa+12)},
+       result:`You left him a can. He thanked you. The boy waved. The old man watched you go with eyes that had seen everything and none of it mattered anymore.`},
+      {text:'Keep moving.',
+       apply(g){g.boy.sa=clamp(g.boy.sa-6);g.karma-=4},
+       result:`You walked past without stopping. The boy looked at the old man as you went.\n\n"Papa, we should—"\n\n"Keep walking."`}
+    ]
+  },
+  {
+    id:'bullets_found', weight:1.5, progress:3,
+    narrative:`In the jacket of a dead man you did not look at too closely. A box of cartridges. The right caliber.`,
+    choices:[
+      {text:'Take them.',
+       apply(g){g.inv.bullets+=6;g.man.sa=clamp(g.man.sa-5);g.karma-=4},
+       result:`Six rounds. You check each one and load them in. You feel the specific weight of them in your pocket as you walk.`},
+      {text:'Leave them with the body.',
+       apply(g){g.karma+=5;g.man.sa=clamp(g.man.sa+5);g.progress+=2},
+       result:`You leave them. You have enough. And there are things you won't do yet.`}
+    ]
+  },
+  {
+    id:'boy_question', weight:1.5, progress:2,
+    narrative:`"Papa."\n\n"What."\n\n"If you died, what would I do?"\n\nYou kept pushing the cart. The road was empty and the sky was the color of old ash.`,
+    choices:[
+      {text:'"You\'d find other good people. I promise."',
+       apply(g){g.boy.sa=clamp(g.boy.sa+12);g.man.sa=clamp(g.man.sa-8);g.karma+=6},
+       result:`"How would I know they were good?"\n\n"You'd know. You've always known."\n\nHe thought about this. Then he took your hand and you walked like that for a while.`},
+      {text:'"Don\'t talk like that."',
+       apply(g){g.boy.sa=clamp(g.boy.sa-8);g.man.sa=clamp(g.man.sa-6)},
+       result:`He went quiet. You walked in silence. You knew it was the wrong answer. You knew it wouldn't be the last time he asked.`},
+      {text:'"I won\'t die. I\'m not going to die."',
+       apply(g){g.boy.sa=clamp(g.boy.sa+5);g.man.sa=clamp(g.man.sa-12)},
+       result:`He looked at you then with eyes too old for his face.\n\n"Okay, Papa."\n\nHe didn't believe you. You knew it. He knew you knew it.`}
+    ]
+  },
+  {
+    id:'cannibalism', weight:.3, progress:2,
+    condition: g => g.man.hu < 20 && g.boy.hu < 20,
+    narrative:`You hadn't eaten in four days. The boy had stopped asking.\n\nThere was a body in the ditch. Not long dead.\n\nYou stood there a long time. You knew what the question was.`,
+    choices:[
+      {text:`"No. We don't do that. Not ever."`,
+       apply(g){g.karma+=20;g.man.sa=clamp(g.man.sa+10);g.boy.sa=clamp(g.boy.sa+12)},
+       result:`You pulled the boy away.\n\n"That's not what we are," you said.\n\n"I know, Papa."\n\nYou kept walking on empty stomachs. That night you found a cache of canned food behind a fallen billboard. You ate until you were sick and you did not speak of the ditch.`},
+      {text:`You do it.`,
+       apply(g){g.man.hu=clamp(g.man.hu+40);g.boy.hu=clamp(g.boy.hu+35);g.man.sa=0;g.boy.sa=0;g.karma-=100},
+       result:`You don't sleep that night. Or the next.\n\nThe boy doesn't speak to you for two days. On the third he says "Papa" and nothing else. It is enough.\n\nBut something has changed. Something that will not come back.`}
+    ]
+  },
+  {
+    id:'coast_near', weight:1, progress:8,
+    condition: g => g.progress >= 70 && !g.reachedCoast,
+    narrative:`The air changed. Something in it—salt, maybe. Or only the idea of salt.\n\n"Papa," the boy said. "I can smell the ocean."\n\nYou could too. Or you told yourself you could.`,
+    choices:[
+      {text:`"We're close. Keep moving."`,
+       apply(g){g.boy.sa=clamp(g.boy.sa+15);g.man.sa=clamp(g.man.sa+12)},
+       result:`The boy walked faster. You let him. The light seemed slightly different here. Slightly.`},
+      {text:`Rest. Make it count.`,
+       apply(g){g.man.hp=clamp(g.man.hp+12);g.boy.hp=clamp(g.boy.hp+12);g.man.sa=clamp(g.man.sa+8);g.boy.sa=clamp(g.boy.sa+10)},
+       result:`One more fire. One more night. Tomorrow the coast.`}
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+//  GAME ENGINE
+// ═══════════════════════════════════════════════
+function karmaLabel(k) {
+  if(k>=80) return 'The fire burns bright';
+  if(k>=60) return 'Carrying the fire';
+  if(k>=40) return 'Uncertain';
+  if(k>=20) return 'The fire dims';
+  return 'The fire is going out';
+}
+
+function applyDailyDecay() {
+  const m = G.man, b = G.boy;
+  m.hu = clamp(m.hu - 6);
+  b.hu = clamp(b.hu - 5);
+  m.th = clamp(m.th - 8);
+  b.th = clamp(b.th - 7);
+  if(m.hu < 20) m.hp = clamp(m.hp - 6);
+  if(b.hu < 20) b.hp = clamp(b.hp - 5);
+  if(m.th < 15) m.hp = clamp(m.hp - 9);
+  if(b.th < 15) b.hp = clamp(b.hp - 8);
+  if(m.sa < 20) { if(Math.random()>.5) m.hp = clamp(m.hp - 4); }
+  if(b.sa < 20) { if(Math.random()>.5) b.hp = clamp(b.hp - 4); }
+  // weather normalizes
+  if(G.weather === 'rain' && Math.random()>.4) G.weather = 'overcast';
+  if(G.weather === 'snow' && Math.random()>.35) G.weather = 'overcast';
+  if(Math.random()>.85) G.weather = ['overcast','overcast','overcast','rain','snow','clear'][Math.floor(Math.random()*6)];
+}
+
+function checkDeath() {
+  const md = G.man.hp <= 0, bd = G.boy.hp <= 0;
+  if(md || bd) {
+    G.over = true;
+    G.deathWho = md && bd ? 'both' : md ? 'man' : 'boy';
+    return true;
+  }
+  return false;
+}
+
+function pickEvent() {
+  // check coast
+  if(G.progress >= 100 && !G.reachedCoast) {
+    return 'COAST';
+  }
+  // filter eligible events
+  const pool = EVENTS.filter(e => {
+    if(G.usedEvents.has(e.id) && e.weight < 2) return false;
+    if(e.condition && !e.condition(G)) return false;
+    if(e.id === G.lastEvent) return false;
+    return true;
+  });
+  if(!pool.length) return EVENTS[Math.floor(Math.random()*EVENTS.length)];
+  // weighted pick
+  const total = pool.reduce((s,e)=>s+e.weight,0);
+  let r = Math.random()*total;
+  for(const e of pool) { r -= e.weight; if(r<=0) return e; }
+  return pool[pool.length-1];
+}
+
+function useSupply(type, who) {
+  if(G.over || G.awaitingContinue) return;
+  const inv = G.inv;
+  const char = who === 'man' ? G.man : G.boy;
+  if(type==='food' && inv.food > 0) {
+    inv.food--;
+    char.hu = clamp(char.hu + 32);
+    char.hp = clamp(char.hp + 4);
+    showStatus(`${who==='man'?'Man':'Boy'} ate. Hunger restored.`, 'ok');
+  } else if(type==='water' && inv.water > 0) {
+    inv.water--;
+    char.th = clamp(char.th + 38);
+    showStatus(`${who==='man'?'Man':'Boy'} drank. Thirst restored.`, 'ok');
+  } else if(type==='medicine' && inv.medicine > 0) {
+    inv.medicine--;
+    char.hp = clamp(char.hp + 35);
+    char.sa = clamp(char.sa + 8);
+    showStatus(`${who==='man'?'Man':'Boy'} treated. Health improved.`, 'ok');
+  } else {
+    showStatus('None remaining.', 'warn');
+    return;
+  }
+  renderStats();
+  renderInv();
+}
+
+function showStatus(msg, type='') {
+  const el = document.getElementById('status-line');
+  el.textContent = msg;
+  el.className = type==='warn' ? 'status-warn' : type==='ok' ? 'status-ok' : '';
+  setTimeout(()=>{ el.textContent=''; el.className=''; }, 3000);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════
+function renderStats() {
+  const set = (id, val) => {
+    const n = document.getElementById(id+'-n');
+    const b = document.getElementById(id+'-b');
+    if(n) n.textContent = Math.max(0,Math.round(val));
+    if(b) { b.style.width = pct(val)+'%'; b.classList.toggle('crit', val < 20); }
+  };
+  set('m-hp', G.man.hp); set('m-hu', G.man.hu);
+  set('m-th', G.man.th); set('m-sa', G.man.sa);
+  set('b-hp', G.boy.hp); set('b-hu', G.boy.hu);
+  set('b-th', G.boy.th); set('b-sa', G.boy.sa);
+  document.getElementById('karma-text').textContent = karmaLabel(G.karma);
+  // supply buttons
+  const f = G.inv.food > 0;
+  const w = G.inv.water > 0;
+  const m = G.inv.medicine > 0;
+  document.getElementById('btn-eat').disabled = !f;
+  document.getElementById('btn-drink').disabled = !w;
+  document.getElementById('btn-feed').disabled = !f;
+  document.getElementById('btn-water-boy').disabled = !w;
+  document.getElementById('btn-heal-m').disabled = !m;
+  document.getElementById('btn-heal-b').disabled = !m;
+  // Blood vignette if man health is low
+  if (G.man.hp <= 30) {
+    document.body.classList.add('health-low');
+  } else {
+    document.body.classList.remove('health-low');
+  }
+
+}
+
+function renderInv() {
+  document.getElementById('i-food').textContent = G.inv.food;
+  document.getElementById('i-water').textContent = G.inv.water;
+  document.getElementById('i-med').textContent = G.inv.medicine;
+  document.getElementById('i-ammo').textContent = G.inv.bullets;
+  document.getElementById('i-flare').textContent = G.inv.flare;
+  const pf = document.getElementById('prog-bar-fill');
+  if(pf) pf.style.width = Math.min(100, G.progress)+'%';
+}
+
+function renderScene() {
+  document.getElementById('scene-svg').innerHTML = getSceneSVG();
+  document.getElementById('day-badge').textContent = `Day ${G.day}`;
+  const wmap = {overcast:'Overcast',rain:'Rain',snow:'Snow',clear:'Clear'};
+  document.getElementById('weather-badge').textContent = wmap[G.weather]||'Overcast';
+}
+
+function typewrite(el, text, speed=22, cb) {
+  el.textContent = '';
+  let i = 0;
+  const t = setInterval(() => {
+    if(i < text.length) { el.textContent += text[i++]; }
+    else { clearInterval(t); if(cb) cb(); }
+  }, speed);
+  return t;
+}
+
+function showChoices(event) {
+  const panel = document.getElementById('choices-list');
+  panel.innerHTML = '';
+  document.getElementById('continue-btn').style.display = 'none';
+  document.getElementById('result-text').style.display = 'none';
+  G.awaitingContinue = false;
+
+  event.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    // check requirements
+    let locked = false, lockNote = '';
+    if(c.req === 'food' && G.inv.food <= 0) { locked = true; lockNote = '(no food)'; }
+    else if(c.req === 'water' && G.inv.water <= 0) { locked = true; lockNote = '(no water)'; }
+    else if(c.req === 'medicine' && G.inv.medicine <= 0) { locked = true; lockNote = '(no medicine)'; }
+    else if(c.req === 'bullets' && G.inv.bullets <= 0) { locked = true; lockNote = '(no ammo)'; }
+    else if(c.req === 'flare' && G.inv.flare <= 0) { locked = true; lockNote = '(no flare)'; }
+    else if(c.reqStat) {
+      const ch = c.reqStat.char === 'man' ? G.man : G.boy;
+      if(ch[c.reqStat.stat] < c.reqStat.min) { locked = true; lockNote = c.reqNote || `(requires ${c.reqStat.stat} ≥ ${c.reqStat.min})`; }
+    }
+    if(locked) { btn.classList.add('locked'); }
+    btn.innerHTML = `${i+1}. ${c.text.replace('food', '🥫 food').replace('water', '💧 water').replace('medicine', '💊 medicine').replace('bullets', '🔫 bullets').replace('pistol', '🔫 pistol')}${locked ? ` <span class="req-note">${lockNote}</span>` : ''}`;
+    if(!locked) btn.addEventListener('click', () => makeChoice(event, i));
+    panel.appendChild(btn);
+  });
+}
+
+function makeChoice(event, idx) {
+  const choice = event.choices[idx];
+  // apply effect
+  choice.apply(G);
+  // advance progress
+  G.progress = clamp(G.progress + (event.progress || 3), 0, 100);
+  renderStats(); renderInv(); renderScene();
+
+  // show result
+  const rt = document.getElementById('result-text');
+  rt.textContent = choice.result || '';
+  rt.style.display = 'block';
+
+  // hide choices, show continue
+  document.getElementById('choices-list').innerHTML = '';
+  const cb = document.getElementById('continue-btn');
+  cb.style.display = 'block';
+  G.awaitingContinue = true;
+
+  // check for warnings
+  const warns = [];
+  if(G.man.hp < 20) warns.push('The man is dying.');
+  if(G.boy.hp < 20) warns.push('The boy is dying.');
+  if(G.man.hu < 15) warns.push('The man is starving.');
+  if(G.boy.hu < 15) warns.push('The boy is starving.');
+  if(G.man.th < 15) warns.push('The man is dehydrated.');
+  if(G.boy.th < 15) warns.push('The boy is dehydrated.');
+  if(warns.length) showStatus(warns[0], 'warn');
+
+  G.scene = 'road';
+}
+
+// ═══════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function nextTurn() {
+  if(G.over) return;
+  G.day++;
+  applyDailyDecay();
+  if(checkDeath()) { triggerDeath(); return; }
+  if(G.progress >= 100 && !G.reachedCoast) { triggerCoast(); return; }
+  const ev = pickEvent();
+  if(ev === 'COAST') { triggerCoast(); return; }
+  G.lastEvent = ev.id;
+  G.usedEvents.add(ev.id);
+  if(ev.scene) G.scene = ev.scene; else G.scene = 'road';
+
+  renderScene(); renderStats(); renderInv();
+  document.getElementById('result-text').style.display = 'none';
+  document.getElementById('continue-btn').style.display = 'none';
+
+  const nt = document.getElementById('narrative-text');
+  typewrite(nt, ev.narrative, 20, () => showChoices(ev));
+}
+
+
+function triggerCoast() {
+  G.reachedCoast = true;
+  G.scene = 'beach';
+  G.inv.flare = 1; // Add flare gun found on a ship
+  renderScene();
+  showScreen('cutscene-screen');
+  document.getElementById('cutscene-svg-wrap').innerHTML = drawBeach();
+  const text = `The coast.
+
+The gray beach, the gray sea, the gray sky. The boy stood beside you looking out at it.
+
+"It's the ocean, Papa."
+
+"Yes."
+
+"It doesn't look like I thought it would."
+
+"No."
+
+The waves came in small and gray and cold. No ships on the water. Nothing on the shore. No warmth in the light at all.
+
+After a long time the boy said: "I thought it would be different."
+
+"I know."
+
+"What do we do now, Papa?"
+
+"I'm sorry, I'm so sorry." You didn't have an answer. The fire had to be somewhere. It had to.
+
+You search a beached ship down the shore and find an Orion flare gun.`;
+  const el = document.getElementById('cutscene-text');
+  typewrite(el, text, 20, () => {
+    const btn = document.getElementById('cutscene-btn');
+    btn.classList.add('show');
+    btn.onclick = () => { showScreen('game-screen'); G.progress = 80; continueAfterCoast(); };
+  });
+}
+
+
+function continueAfterCoast() {
+  document.getElementById('prog-lbl').textContent = 'Carrying on';
+  document.getElementById('prog-bar-bg').style.display = 'none';
+  nextTurn();
+}
+
+function triggerDeath() {
+  G.over = true;
+  showScreen('death-screen');
+  const who = G.deathWho;
+  const line = who === 'both' ? 'They are both gone.' : who === 'man' ? 'The man has died.' : 'The boy has died.';
+  const el = document.getElementById('death-text');
+  el.textContent = line;
+  setTimeout(() => el.classList.add('show'), 600);
+
+  // Fade to black and then summary
+  setTimeout(() => {
+    document.getElementById('death-screen').style.opacity = '0';
+    setTimeout(() => {
+       showSummary();
+       document.getElementById('summary-screen').style.opacity = '0';
+       document.getElementById('summary-screen').style.transition = 'opacity 2s';
+       setTimeout(() => { document.getElementById('summary-screen').style.opacity = '1'; }, 100);
+    }, 2000);
+  }, 4200);
+}
+
+function showSummary() {
+  showScreen('summary-screen');
+  const who = G.deathWho;
+  const survived = who === 'man' ? 'The boy' : who === 'boy' ? 'The man' : 'Neither';
+  const k = G.karma;
+
+  document.getElementById('sum-stats').innerHTML = `
+    <div class="sum-row"><span class="sum-key">Days survived</span><span class="sum-val">${G.day}</span></div>
+    <div class="sum-row"><span class="sum-key">Reached the coast</span><span class="sum-val">${G.reachedCoast ? 'Yes' : 'No'}</span></div>
+    <div class="sum-row"><span class="sum-key">Survived</span><span class="sum-val">${survived}</span></div>
+    <div class="sum-row"><span class="sum-key">Karma</span><span class="sum-val">${k} — ${karmaLabel(k)}</span></div>
+    <div class="sum-row"><span class="sum-key">Man's final health</span><span class="sum-val">${Math.max(0,Math.round(G.man.hp))}</span></div>
+    <div class="sum-row"><span class="sum-key">Boy's final health</span><span class="sum-val">${Math.max(0,Math.round(G.boy.hp))}</span></div>
+  `;
+
+  let ending = '';
+  if(who === 'both') {
+    ending = `They walked until they could not walk any further. What they carried they carried to the end.\n\nThe fire went out.`;
+  } else if(who === 'boy') {
+    ending = `He tried to be good. He tried to carry the fire.\n\nIn the end, the road was too long.`;
+  } else if(who === 'man') {
+    if(G.reachedCoast && G.boy.hp > 0 && k >= 65) {
+      ending = `He carried the fire as far as he could. And at the last, it was enough.`;
+      // secret ending
+      document.getElementById('secret-ending').style.display = 'block';
+      typewrite(document.getElementById('secret-ending'),
+        `Three days after the man died, the boy was still by the body when a man came down the beach.\n\nHe had a woman with him and two children.\n\nThe man knelt in front of the boy and looked at him.\n\n"You can come with us," he said. "Do you know how to shoot that pistol?"\n\n"Yes."\n\nHe took the boy in his arms and held him.\n\n"It's all right," the man said. "Everything's all right."\n\nThe boy said: "Is the fire real?"\n\n"Yes it is," said the man. "It was always real."`,
+        25);
+    } else {
+      ending = `He did what he could. More, perhaps, than could have been asked of him.\n\nThe boy goes on alone.\n\nThe fire may yet survive.`;
+    }
+  }
+  document.getElementById('ending-text').textContent = ending;
+}
+
+// ═══════════════════════════════════════════════
+//  STARTUP
+// ═══════════════════════════════════════════════
+document.getElementById('title-art').innerHTML = drawTitle();
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  showScreen('intro-screen');
+  const intro = `When he woke in the woods in the dark and the cold of the night he'd reach out to touch the child sleeping beside him.\n\nSleeps that were not like sleep.\n\nAs if the final act of some cold secular sacrament.\n\nThey were carrying the fire. He had to believe that. In the last years of the world, that had to mean something.\n\nThe road ran south.\n\nThey would follow it.`;
+  typewrite(document.getElementById('intro-text'), intro, 30, () => {
+    setTimeout(() => {
+      showScreen('game-screen');
+      renderStats(); renderInv(); renderScene();
+      const ev = pickEvent();
+      G.lastEvent = ev.id;
+      G.usedEvents.add(ev.id);
+      const nt = document.getElementById('narrative-text');
+      nt.textContent = '';
+      typewrite(nt, ev.narrative, 22, () => showChoices(ev));
+    }, 1800);
+  });
+});
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  if(!G.awaitingContinue) return;
+  G.awaitingContinue = false;
+  if(checkDeath()) { triggerDeath(); return; }
+  nextTurn();
+});
+
+// ═══════════════════════════════════════════════
+//  ASH PARTICLES
+// ═══════════════════════════════════════════════
+const canvas = document.createElement('canvas');
+canvas.id = 'ash-canvas';
+document.body.appendChild(canvas);
+const ctx = canvas.getContext('2d');
+let w, h;
+const particles = [];
+function resizeCanvas() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+for(let i=0; i<150; i++) {
+  particles.push({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    r: Math.random() * 1.5 + 0.5,
+    d: Math.random() * 100,
+    vx: Math.random() * 0.5 - 0.25,
+    vy: Math.random() * 1 + 0.5
+  });
+}
+
+function drawAsh() {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(180, 180, 180, 0.7)';
+  ctx.beginPath();
+  for(let i=0; i<particles.length; i++) {
+    const p = particles[i];
+    ctx.moveTo(p.x, p.y);
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2, true);
+  }
+  ctx.fill();
+  updateAsh();
+  requestAnimationFrame(drawAsh);
+}
+
+function updateAsh() {
+  let angle = 0;
+  for(let i=0; i<particles.length; i++) {
+    const p = particles[i];
+    angle += 0.01;
+    p.y += Math.cos(angle + p.d) + p.vy;
+    p.x += Math.sin(angle) * 1 + p.vx;
+
+    // weather effects
+    if(typeof G !== 'undefined') {
+        if(G.weather === 'snow') {
+            p.y += 2; // faster fall
+            p.r = Math.max(p.r, 2); // bigger flakes
+        } else if(G.weather === 'rain') {
+            p.y += 6; 
+            p.x += 1;
+        }
+    }
+
+    if(p.x > w + 5 || p.x < -5 || p.y > h) {
+      if(i%3 > 0) {
+        particles[i] = {x: Math.random()*w, y: -10, r: p.r, d: p.d, vx: p.vx, vy: p.vy};
+      } else {
+        if(Math.sin(angle) > 0) {
+          particles[i] = {x: -5, y: Math.random()*h, r: p.r, d: p.d, vx: p.vx, vy: p.vy};
+        } else {
+          particles[i] = {x: w+5, y: Math.random()*h, r: p.r, d: p.d, vx: p.vx, vy: p.vy};
+        }
+      }
+    }
+  }
+}
+drawAsh();
+
+</script>
+</body>
+</html>
