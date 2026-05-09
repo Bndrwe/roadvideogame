@@ -328,6 +328,9 @@ const G = {
   lastEvent: null,
   supplyUsedThisTurn: false,
   awaitingContinue: false,
+  sceneAction: 'idle',
+  actionTarget: 'both',
+  actionTimer: null,
 };
 
 const clamp = (v,mn=0,mx=100) => Math.max(mn, Math.min(mx, v));
@@ -350,31 +353,42 @@ function tree(x, y, s) {
 
 function figures(cx, by, scale=1, action='idle', target='both') {
   const s = scale;
-  const manClass = `svg-figure man-figure ${target==='man' && action ? action : ''}`.trim();
-  const boyClass = `svg-figure boy-figure ${target==='boy' && action ? action : ''}`.trim();
+  const tMan = target==='man' || target==='both';
+  const tBoy = target==='boy' || target==='both';
+  const manClass = `svg-figure man-figure ${tMan && action!=='idle' ? action : ''}`.trim();
+  const boyClass = `svg-figure boy-figure ${tBoy && action!=='idle' ? action : ''}`.trim();
   const cartClass = `cart-figure ${action==='walk' ? 'cart-walk' : ''}`.trim();
   return `
-  <g class="${manClass}" fill="#0e0e0e" transform="translate(${cx-14*s},${by})">
-    <circle cx="0" cy="${-30*s}" r="${4*s}"/>
-    <rect x="${-2.5*s}" y="${-26*s}" width="${5*s}" height="${15*s}" rx="${1*s}"/>
-    <line x1="${-2.5*s}" y1="${-24*s}" x2="${-8*s}" y2="${-18*s}" stroke="#0e0e0e" stroke-width="${2*s}"/>
-    <line x1="${2.5*s}" y1="${-24*s}" x2="${9*s}" y2="${-20*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
-    <line x1="${-1*s}" y1="${-11*s}" x2="${-3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
-    <line x1="${1*s}" y1="${-11*s}" x2="${3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+  <!-- Man -->
+  <g transform="translate(${cx-14*s},${by})">
+    <g class="${manClass}" fill="#0e0e0e">
+      <circle cx="0" cy="${-30*s}" r="${4*s}"/>
+      <rect x="${-2.5*s}" y="${-26*s}" width="${5*s}" height="${15*s}" rx="${1*s}"/>
+      <line x1="${-2.5*s}" y1="${-24*s}" x2="${-8*s}" y2="${-18*s}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+      <line x1="${2.5*s}" y1="${-24*s}" x2="${9*s}" y2="${-20*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+      <line x1="${-1*s}" y1="${-11*s}" x2="${-3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+      <line x1="${1*s}" y1="${-11*s}" x2="${3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
+    </g>
   </g>
-  <g class="${boyClass}" fill="#0e0e0e" transform="translate(${cx+12*s},${by+6*s})">
-    <circle cx="0" cy="${-22*s}" r="${3*s}"/>
-    <rect x="${-2*s}" y="${-19*s}" width="${4*s}" height="${11*s}" rx="${1*s}"/>
-    <line x1="${-2*s}" y1="${-17*s}" x2="${-6*s}" y2="${-14*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
-    <line x1="${2*s}" y1="${-17*s}" x2="${5*s}" y2="${-15*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
-    <line x1="${-0.5*s}" y1="${-8*s}" x2="${-2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
-    <line x1="${0.5*s}" y1="${-8*s}" x2="${2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+  <!-- Boy -->
+  <g transform="translate(${cx+12*s},${by+6*s})">
+    <g class="${boyClass}" fill="#0e0e0e">
+      <circle cx="0" cy="${-22*s}" r="${3*s}"/>
+      <rect x="${-2*s}" y="${-19*s}" width="${4*s}" height="${11*s}" rx="${1*s}"/>
+      <line x1="${-2*s}" y1="${-17*s}" x2="${-6*s}" y2="${-14*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+      <line x1="${2*s}" y1="${-17*s}" x2="${5*s}" y2="${-15*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+      <line x1="${-0.5*s}" y1="${-8*s}" x2="${-2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+      <line x1="${0.5*s}" y1="${-8*s}" x2="${2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
+    </g>
   </g>
-  <g class="${cartClass}" stroke="#0e0e0e" fill="none" transform="translate(${cx-28*s},${by-4*s})">
-    <rect x="-9" y="-12" width="18" height="9" stroke-width="1.5" rx="1"/>
-    <circle cx="-6" cy="-1" r="3.5" stroke-width="1"/>
-    <circle cx="7" cy="-1" r="3.5" stroke-width="1"/>
-    <line x1="-9" y1="-4" x2="-20" y2="-2" stroke-width="1.5"/>
+  <!-- Cart -->
+  <g transform="translate(${cx-28*s},${by-4*s})">
+    <g class="${cartClass}" stroke="#0e0e0e" fill="none">
+      <rect x="-9" y="-12" width="18" height="9" stroke-width="1.5" rx="1"/>
+      <circle cx="-6" cy="-1" r="3.5" stroke-width="1"/>
+      <circle cx="7" cy="-1" r="3.5" stroke-width="1"/>
+      <line x1="-9" y1="-4" x2="-20" y2="-2" stroke-width="1.5"/>
+    </g>
   </g>`;
 }
 
@@ -464,7 +478,7 @@ function drawHouse() {
   <line x1="200" y1="170" x2="260" y2="170" stroke="#1e1e1e" stroke-width="2"/>
   <line x1="430" y1="168" x2="510" y2="170" stroke="#1e1e1e" stroke-width="2"/>
   <!-- Small figures -->
-  ${figures(220, 200, .8)}
+  ${figures(220, 200, .8, G.sceneAction || 'idle', G.actionTarget || 'both')}
   </svg>`;
 }
 
@@ -486,7 +500,7 @@ function drawBunker() {
   <!-- glow from below -->
   <rect x="300" y="108" width="100" height="80" fill="rgba(60,40,20,0.15)"/>
   <!-- figure looking down -->
-  ${figures(250, 165, .85)}
+  ${figures(250, 165, .85, G.sceneAction || 'idle', G.actionTarget || 'both')}
   </svg>`;
 }
 
@@ -505,7 +519,7 @@ function drawRiver() {
   <!-- bank trees -->
   ${tree(80, 170, 1.1)} ${tree(120, 172, .9)} ${tree(580, 171, 1.0)} ${tree(610, 169, .85)}
   <!-- figures at riverbank -->
-  ${figures(300, 180, .9)}
+  ${figures(300, 180, .9, G.sceneAction || 'idle', G.actionTarget || 'both')}
   </svg>`;
 }
 
@@ -1155,7 +1169,8 @@ function renderInv() {
 
 
 function triggerSceneAction(action, target='both', duration=900) {
-  clearTimeout(G.actionTimer);
+  if (!G) return;
+  if (G.actionTimer) clearTimeout(G.actionTimer);
   G.sceneAction = action;
   G.actionTarget = target;
   renderScene();
@@ -1174,13 +1189,29 @@ function renderScene() {
 }
 
 function typewrite(el, text, speed=22, cb) {
+  if(!el) return null;
+  if(el._typeTimer) {
+    clearInterval(el._typeTimer);
+    el._typeTimer = null;
+  }
+  const finalText = String(text ?? '');
   el.textContent = '';
   let i = 0;
-  const t = setInterval(() => {
-    if(i < text.length) { el.textContent += text[i++]; }
-    else { clearInterval(t); if(cb) cb(); }
+  if(finalText.length === 0) {
+    if(cb) cb();
+    return null;
+  }
+  el._typeTimer = setInterval(() => {
+    if(i < finalText.length) {
+      el.textContent += finalText[i++];
+    } else {
+      clearInterval(el._typeTimer);
+      el._typeTimer = null;
+      el.textContent = finalText;
+      if(cb) cb();
+    }
   }, speed);
-  return t;
+  return el._typeTimer;
 }
 
 function showChoices(event) {
