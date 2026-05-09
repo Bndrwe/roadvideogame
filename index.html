@@ -9,7 +9,7 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#080808;--surface:#111;--surface2:#181818;--border:#1e1e1e;
-  --text:#b0b0b0;--dim:#484848;--bright:#d0d0d0;
+  --text:#ffffff;--dim:#888888;--bright:#ffffff;
   --health:#6a3a3a;--health-bg:#1e0e0e;
   --hunger:#6a5a3a;--hunger-bg:#1e1a0e;
   --thirst:#3a4a6a;--thirst-bg:#0e141e;
@@ -30,7 +30,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 
 /* ── INTRO ── */
 #intro-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 40px;background:#000}
-#intro-text{max-width:520px;font-size:16px;line-height:2.1;color:#666;font-style:italic;white-space:pre-wrap}
+#intro-text{max-width:520px;font-size:16px;line-height:2.1;color:#ffffff;font-style:italic;white-space:pre-wrap}
 
 /* ── GAME ── */
 #game-screen{flex-direction:column;min-height:100vh;max-width:980px;margin:0 auto;width:100%}
@@ -73,7 +73,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 #karma-block .klbl{font-size:10px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
 #karma-text{font-family:'Special Elite',serif;font-size:12px;color:var(--dim);font-style:italic}
 #supply-btns{margin-top:16px;display:flex;flex-direction:column;gap:4px}
-.sup-btn{background:transparent;border:1px solid #1e1e1e;color:var(--dim);font-family:'Courier Prime',monospace;font-size:11px;padding:5px 8px;cursor:pointer;text-align:left;transition:all .2s;letter-spacing:.05em}
+.sup-btn{background:transparent;border:1px solid #1e1e1e;color:#888888;font-family:'Courier Prime',monospace;font-size:11px;padding:6px 10px;cursor:pointer;text-align:center;transition:all .2s;letter-spacing:.05em;width:100%;margin-bottom:4px;}
+.sup-btn:hover{color:#ffffff; border-color:#666666;}
 .sup-btn:hover:not(:disabled){border-color:#444;color:var(--text)}
 .sup-btn:disabled{opacity:.2;cursor:not-allowed}
 
@@ -171,7 +172,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
     </div>
     <div id="stats-col">
       <div class="char-block">
-        <h3>The Man</h3>
+        <h3>The Man (You)</h3>
         <div class="stat-row"><div class="stat-lbl"><span>Health</span><span class="stat-num" id="m-hp-n">80</span></div><div class="bar-bg hp"><div class="bar-fill hp" id="m-hp-b" style="width:80%"></div></div></div>
         <div class="stat-row"><div class="stat-lbl"><span>Hunger</span><span class="stat-num" id="m-hu-n">70</span></div><div class="bar-bg hu"><div class="bar-fill hu" id="m-hu-b" style="width:70%"></div></div></div>
         <div class="stat-row"><div class="stat-lbl"><span>Thirst</span><span class="stat-num" id="m-th-n">70</span></div><div class="bar-bg th"><div class="bar-fill th" id="m-th-b" style="width:70%"></div></div></div>
@@ -179,7 +180,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
       </div>
       <div class="char-divider"></div>
       <div class="char-block">
-        <h3>The Boy</h3>
+        <h3>The Boy (Your Son)</h3>
         <div class="stat-row"><div class="stat-lbl"><span>Health</span><span class="stat-num" id="b-hp-n">85</span></div><div class="bar-bg hp"><div class="bar-fill hp" id="b-hp-b" style="width:85%"></div></div></div>
         <div class="stat-row"><div class="stat-lbl"><span>Hunger</span><span class="stat-num" id="b-hu-n">75</span></div><div class="bar-bg hu"><div class="bar-fill hu" id="b-hu-b" style="width:75%"></div></div></div>
         <div class="stat-row"><div class="stat-lbl"><span>Thirst</span><span class="stat-num" id="b-th-n">75</span></div><div class="bar-bg th"><div class="bar-fill th" id="b-th-b" style="width:75%"></div></div></div>
@@ -190,12 +191,12 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
         <div id="karma-text">Uncertain</div>
       </div>
       <div id="supply-btns">
-        <button class="sup-btn" id="btn-eat" onclick="useSupply('food','man')">Eat [man] ▸ food</button>
-        <button class="sup-btn" id="btn-drink" onclick="useSupply('water','man')">Drink [man] ▸ water</button>
-        <button class="sup-btn" id="btn-feed" onclick="useSupply('food','boy')">Feed boy ▸ food</button>
-        <button class="sup-btn" id="btn-water-boy" onclick="useSupply('water','boy')">Water boy ▸ water</button>
-        <button class="sup-btn" id="btn-heal-m" onclick="useSupply('medicine','man')">Heal man ▸ meds</button>
-        <button class="sup-btn" id="btn-heal-b" onclick="useSupply('medicine','boy')">Heal boy ▸ meds</button>
+        <button class="sup-btn" id="btn-eat" onclick="useSupply('food','man')">Give Food to Man (-1 Food)</button>
+        <button class="sup-btn" id="btn-drink" onclick="useSupply('water','man')">Give Water to Man (-1 Water)</button>
+        <button class="sup-btn" id="btn-feed" onclick="useSupply('food','boy')">Give Food to Boy (-1 Food)</button>
+        <button class="sup-btn" id="btn-water-boy" onclick="useSupply('water','boy')">Give Water to Boy (-1 Water)</button>
+        <button class="sup-btn" id="btn-heal-m" onclick="useSupply('medicine','man')">Give Meds to Man (-1 Meds)</button>
+        <button class="sup-btn" id="btn-heal-b" onclick="useSupply('medicine','boy')">Give Meds to Boy (-1 Meds)</button>
       </div>
     </div>
   </div>
@@ -979,22 +980,23 @@ function useSupply(type, who) {
   if(G.over || G.awaitingContinue) return;
   const inv = G.inv;
   const char = who === 'man' ? G.man : G.boy;
+  const name = who === 'man' ? 'You' : 'The Boy';
   if(type==='food' && inv.food > 0) {
     inv.food--;
     char.hu = clamp(char.hu + 32);
     char.hp = clamp(char.hp + 4);
-    showStatus(`${who==='man'?'Man':'Boy'} ate. Hunger restored.`, 'ok');
+    showStatus(`${name} ate food. Hunger restored.`, 'ok');
   } else if(type==='water' && inv.water > 0) {
     inv.water--;
     char.th = clamp(char.th + 38);
-    showStatus(`${who==='man'?'Man':'Boy'} drank. Thirst restored.`, 'ok');
+    showStatus(`${name} drank water. Thirst restored.`, 'ok');
   } else if(type==='medicine' && inv.medicine > 0) {
     inv.medicine--;
     char.hp = clamp(char.hp + 35);
     char.sa = clamp(char.sa + 8);
-    showStatus(`${who==='man'?'Man':'Boy'} treated. Health improved.`, 'ok');
+    showStatus(`${name} took medicine. Health improved.`, 'ok');
   } else {
-    showStatus('None remaining.', 'warn');
+    showStatus(`No ${type} remaining!`, 'warn');
     return;
   }
   renderStats();
@@ -1266,7 +1268,7 @@ document.getElementById('title-art').innerHTML = drawTitle();
 
 document.getElementById('start-btn').addEventListener('click', () => {
   showScreen('intro-screen');
-  const intro = `When he woke in the woods in the dark and the cold of the night he'd reach out to touch the child sleeping beside him.\n\nSleeps that were not like sleep.\n\nAs if the final act of some cold secular sacrament.\n\nThey were carrying the fire. He had to believe that. In the last years of the world, that had to mean something.\n\nThe road ran south.\n\nThey would follow it.`;
+  const intro = `You are the man. When you wake in the woods in the dark and the cold of the night you reach out to touch the boy sleeping beside you.\n\nSleeps that are not like sleep.\n\nAs if the final act of some cold secular sacrament.\n\nYou are carrying the fire. You have to believe that. In the last years of the world, that has to mean something.\n\nThe road runs south.\n\nYou and the boy will follow it.\n\n[INSTRUCTIONS: You must manage the Health, Hunger, Thirst, and Sanity for both yourself (The Man) and The Boy.\n• Use the supply buttons below the stats to consume Food, Water, and Medicine.\n• Be careful: supplies are shared, so choose who needs them most.\n• Click "CONTINUE" to face the next event on the road.]`;
   typewrite(document.getElementById('intro-text'), intro, 30, () => {
     setTimeout(() => {
       showScreen('game-screen');
