@@ -32,6 +32,10 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 #intro-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 40px;background:#000}
 #intro-text{max-width:520px;font-size:16px;line-height:2.1;color:#ffffff;font-style:italic;white-space:pre-wrap}
 
+#intro-continue-btn{display:none;margin-top:28px;background:transparent;border:1px solid #333;color:var(--text);font-family:'Courier Prime',monospace;font-size:12px;letter-spacing:.25em;padding:12px 28px;cursor:pointer;text-transform:uppercase;transition:all .25s}
+#intro-continue-btn:hover{border-color:#666;color:#fff}
+
+
 /* ── GAME ── */
 #game-screen{flex-direction:column;min-height:100vh;max-width:980px;margin:0 auto;width:100%}
 #scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505}
@@ -225,6 +229,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 <!-- INTRO -->
 <div id="intro-screen" class="screen">
   <div id="intro-text"></div>
+  <button id="intro-continue-btn">Continue</button>
 </div>
 
 <!-- GAME -->
@@ -1190,6 +1195,8 @@ function renderScene() {
 
 function typewrite(el, text, speed=22, cb) {
   if(!el) return null;
+  const runId = (el._typeRunId || 0) + 1;
+  el._typeRunId = runId;
   if(el._typeTimer) {
     clearInterval(el._typeTimer);
     el._typeTimer = null;
@@ -1198,17 +1205,22 @@ function typewrite(el, text, speed=22, cb) {
   el.textContent = '';
   let i = 0;
   if(finalText.length === 0) {
-    if(cb) cb();
+    if(cb && el._typeRunId === runId) cb();
     return null;
   }
   el._typeTimer = setInterval(() => {
+    if(el._typeRunId !== runId) {
+      clearInterval(el._typeTimer);
+      el._typeTimer = null;
+      return;
+    }
     if(i < finalText.length) {
       el.textContent += finalText[i++];
     } else {
       clearInterval(el._typeTimer);
       el._typeTimer = null;
       el.textContent = finalText;
-      if(cb) cb();
+      if(cb && el._typeRunId === runId) cb();
     }
   }, speed);
   return el._typeTimer;
@@ -1216,7 +1228,15 @@ function typewrite(el, text, speed=22, cb) {
 
 function showChoices(event) {
   const panel = document.getElementById('choices-list');
+  const nt = document.getElementById('narrative-text');
+  if(!panel || !event) return;
+  if(nt && nt._typeTimer) {
+    clearInterval(nt._typeTimer);
+    nt._typeTimer = null;
+    nt.textContent = String(event.narrative ?? '');
+  }
   panel.innerHTML = '';
+  panel.style.display = 'flex';
   document.getElementById('continue-btn').style.display = 'none';
   document.getElementById('result-text').style.display = 'none';
   G.awaitingContinue = false;
@@ -1224,7 +1244,6 @@ function showChoices(event) {
   event.choices.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
-    // check requirements
     let locked = false, lockNote = '';
     if(c.req === 'food' && G.inv.food <= 0) { locked = true; lockNote = '(no food)'; }
     else if(c.req === 'water' && G.inv.water <= 0) { locked = true; lockNote = '(no water)'; }
@@ -1235,7 +1254,7 @@ function showChoices(event) {
       const ch = c.reqStat.char === 'man' ? G.man : G.boy;
       if(ch[c.reqStat.stat] < c.reqStat.min) { locked = true; lockNote = c.reqNote || `(requires ${c.reqStat.stat} ≥ ${c.reqStat.min})`; }
     }
-    if(locked) { btn.classList.add('locked'); }
+    if(locked) btn.classList.add('locked');
     btn.innerHTML = `${i+1}. ${c.text.replace('food', '🥫 food').replace('water', '💧 water').replace('medicine', '💊 medicine').replace('bullets', '🔫 bullets').replace('pistol', '🔫 pistol')}${locked ? ` <span class="req-note">${lockNote}</span>` : ''}`;
     if(!locked) btn.addEventListener('click', () => makeChoice(event, i));
     panel.appendChild(btn);
@@ -1244,24 +1263,33 @@ function showChoices(event) {
 
 function makeChoice(event, idx) {
   const choice = event.choices[idx];
-  // apply effect
+  if(!choice) return;
+
   choice.apply(G);
-  // advance progress
   G.progress = clamp(G.progress + (event.progress || 3), 0, 100);
-  renderStats(); renderInv(); renderScene();
+  renderStats();
+  renderInv();
+  renderScene();
 
-  // show result
   const rt = document.getElementById('result-text');
-  rt.textContent = choice.result || '';
+  const cl = document.getElementById('choices-list');
+  let resultText = '';
+  try {
+    if(typeof choice.result === 'function') resultText = choice.result();
+    else resultText = choice.result;
+  } catch(e) {
+    resultText = choice._r || '';
+  }
+  if(!resultText && choice._r) resultText = choice._r;
+  if(!resultText) resultText = 'You move on down the road.';
+  rt.textContent = String(resultText);
   rt.style.display = 'block';
-
-  // hide choices, show continue
-  document.getElementById('choices-list').innerHTML = '';
+  cl.innerHTML = '';
+  cl.style.display = 'flex';
   const cb = document.getElementById('continue-btn');
   cb.style.display = 'block';
   G.awaitingContinue = true;
 
-  // check for warnings
   const warns = [];
   if(G.man.hp < 20) warns.push('The man is dying.');
   if(G.boy.hp < 20) warns.push('The boy is dying.');
@@ -1294,11 +1322,16 @@ function nextTurn() {
   G.usedEvents.add(ev.id);
   if(ev.scene) G.scene = ev.scene; else G.scene = 'road';
 
-  renderScene(); renderStats(); renderInv();
-  document.getElementById('result-text').style.display = 'none';
-  document.getElementById('continue-btn').style.display = 'none';
-
+  renderScene();
+  renderStats();
+  renderInv();
+  const rt = document.getElementById('result-text');
   const nt = document.getElementById('narrative-text');
+  const cl = document.getElementById('choices-list');
+  rt.textContent = '';
+  rt.style.display = 'none';
+  cl.innerHTML = '';
+  document.getElementById('continue-btn').style.display = 'none';
   typewrite(nt, ev.narrative, 20, () => showChoices(ev));
 }
 
@@ -1411,19 +1444,49 @@ document.getElementById('title-art').innerHTML = drawTitle();
 
 document.getElementById('start-btn').addEventListener('click', () => {
   showScreen('intro-screen');
-  const intro = `You are the man. When you wake in the woods in the dark and the cold of the night you reach out to touch the boy sleeping beside you.\n\nSleeps that are not like sleep.\n\nAs if the final act of some cold secular sacrament.\n\nYou are carrying the fire. You have to believe that. In the last years of the world, that has to mean something.\n\nThe road runs south.\n\nYou and the boy will follow it.\n\n[INSTRUCTIONS: You must manage the Health, Hunger, Thirst, and Sanity for both yourself (The Man) and The Boy.\n• Use the supply buttons below the stats to consume Food, Water, and Medicine.\n• Be careful: supplies are shared, so choose who needs them most.\n• Click "CONTINUE" to face the next event on the road.]`;
+  const introBtn = document.getElementById('intro-continue-btn');
+  introBtn.style.display = 'none';
+  const intro = `You are the man. When you wake in the woods in the dark and the cold of the night you reach out to touch the boy sleeping beside you.
+
+Sleeps that are not like sleep.
+
+As if the final act of some cold secular sacrament.
+
+You are carrying the fire. You have to believe that. In the last years of the world, that has to mean something.
+
+The road runs south.
+
+You and the boy will follow it.
+
+[INSTRUCTIONS: You must manage the Health, Hunger, Thirst, and Sanity for both yourself (The Man) and The Boy.
+• Use the supply buttons below the stats to consume Food, Water, and Medicine.
+• Be careful: supplies are shared, so choose who needs them most.
+• Click choices to respond to events on the road.]`;
   typewrite(document.getElementById('intro-text'), intro, 30, () => {
-    setTimeout(() => {
-      showScreen('game-screen');
-      renderStats(); renderInv(); renderScene();
-      const ev = pickEvent();
-      G.lastEvent = ev.id;
-      G.usedEvents.add(ev.id);
-      const nt = document.getElementById('narrative-text');
-      nt.textContent = '';
-      typewrite(nt, ev.narrative, 22, () => showChoices(ev));
-    }, 1800);
+    introBtn.style.display = 'inline-block';
   });
+});
+
+document.getElementById('intro-continue-btn').addEventListener('click', () => {
+  showScreen('game-screen');
+  renderStats();
+  renderInv();
+  renderScene();
+  const ev = pickEvent();
+  G.lastEvent = ev.id;
+  if(ev !== 'COAST') G.usedEvents.add(ev.id);
+  const nt = document.getElementById('narrative-text');
+  const rt = document.getElementById('result-text');
+  const cl = document.getElementById('choices-list');
+  rt.textContent = '';
+  rt.style.display = 'none';
+  cl.innerHTML = '';
+  document.getElementById('continue-btn').style.display = 'none';
+  if(ev === 'COAST') {
+    triggerCoast();
+    return;
+  }
+  typewrite(nt, ev.narrative, 22, () => showChoices(ev));
 });
 
 document.getElementById('continue-btn').addEventListener('click', () => {
