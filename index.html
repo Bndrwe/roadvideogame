@@ -137,6 +137,78 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .health-low #vignette {
   box-shadow: inset 0 0 150px 20px rgba(100,0,0,0.4);
 }
+
+/* SVG ANIMATIONS */
+@keyframes fallRain {
+  0% { transform: translate(0, -20px); opacity: 0; }
+  20% { opacity: .55; }
+  100% { transform: translate(15px, 200px); opacity: 0; }
+}
+@keyframes fallSnow {
+  0% { transform: translate(0, -20px); opacity: 0; }
+  20% { opacity: .5; }
+  100% { transform: translate(-10px, 150px); opacity: 0; }
+}
+.rain-drop { animation: fallRain linear infinite; }
+.snow-flake { animation: fallSnow linear infinite; }
+@keyframes floatSky {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+#sg { animation: floatSky 10s ease-in-out infinite; }
+
+
+@keyframes driftAsh {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translate(30px, 120px); opacity: 0; }
+}
+.ash-particle { animation: driftAsh linear infinite; }
+
+
+/* Action animations */
+@keyframes walkBob {
+  0% { transform: translateY(0px) translateX(0px); }
+  25% { transform: translateY(-2px) translateX(1px); }
+  50% { transform: translateY(0px) translateX(2px); }
+  75% { transform: translateY(-2px) translateX(1px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+@keyframes eatBob {
+  0% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-3px) scale(1.03); }
+  100% { transform: translateY(0px) scale(1); }
+}
+@keyframes drinkTilt {
+  0% { transform: rotate(0deg) translateY(0px); }
+  35% { transform: rotate(-4deg) translateY(-2px); }
+  70% { transform: rotate(2deg) translateY(-1px); }
+  100% { transform: rotate(0deg) translateY(0px); }
+}
+@keyframes healPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: .82; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes cartRoll {
+  0% { transform: translateX(0px); }
+  50% { transform: translateX(2px); }
+  100% { transform: translateX(0px); }
+}
+#scene-svg svg .svg-figure,
+#scene-svg svg .cart-figure {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  will-change: transform, opacity;
+}
+#scene-svg svg .walk { animation: walkBob .45s ease-in-out 4; }
+#scene-svg svg .eat { animation: eatBob .45s ease-in-out 3; }
+#scene-svg svg .drink { animation: drinkTilt .6s ease-in-out 3; }
+#scene-svg svg .heal { animation: healPulse .7s ease-in-out 2; }
+#scene-svg svg .cart-walk { animation: cartRoll .45s ease-in-out 4; }
+
 </style>
 </head>
 <body>
@@ -276,10 +348,13 @@ function tree(x, y, s) {
   </g>`;
 }
 
-function figures(cx, by, scale=1) {
+function figures(cx, by, scale=1, action='idle', target='both') {
   const s = scale;
+  const manClass = `svg-figure man-figure ${target==='man' && action ? action : ''}`.trim();
+  const boyClass = `svg-figure boy-figure ${target==='boy' && action ? action : ''}`.trim();
+  const cartClass = `cart-figure ${action==='walk' ? 'cart-walk' : ''}`.trim();
   return `
-  <g fill="#0e0e0e" transform="translate(${cx-14*s},${by})">
+  <g class="${manClass}" fill="#0e0e0e" transform="translate(${cx-14*s},${by})">
     <circle cx="0" cy="${-30*s}" r="${4*s}"/>
     <rect x="${-2.5*s}" y="${-26*s}" width="${5*s}" height="${15*s}" rx="${1*s}"/>
     <line x1="${-2.5*s}" y1="${-24*s}" x2="${-8*s}" y2="${-18*s}" stroke="#0e0e0e" stroke-width="${2*s}"/>
@@ -287,7 +362,7 @@ function figures(cx, by, scale=1) {
     <line x1="${-1*s}" y1="${-11*s}" x2="${-3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
     <line x1="${1*s}" y1="${-11*s}" x2="${3*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${2*s}"/>
   </g>
-  <g fill="#0e0e0e" transform="translate(${cx+12*s},${by+6*s})">
+  <g class="${boyClass}" fill="#0e0e0e" transform="translate(${cx+12*s},${by+6*s})">
     <circle cx="0" cy="${-22*s}" r="${3*s}"/>
     <rect x="${-2*s}" y="${-19*s}" width="${4*s}" height="${11*s}" rx="${1*s}"/>
     <line x1="${-2*s}" y1="${-17*s}" x2="${-6*s}" y2="${-14*s}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
@@ -295,7 +370,7 @@ function figures(cx, by, scale=1) {
     <line x1="${-0.5*s}" y1="${-8*s}" x2="${-2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
     <line x1="${0.5*s}" y1="${-8*s}" x2="${2*s}" y2="${0}" stroke="#0e0e0e" stroke-width="${1.5*s}"/>
   </g>
-  <g stroke="#0e0e0e" fill="none" transform="translate(${cx-28*s},${by-4*s})">
+  <g class="${cartClass}" stroke="#0e0e0e" fill="none" transform="translate(${cx-28*s},${by-4*s})">
     <rect x="-9" y="-12" width="18" height="9" stroke-width="1.5" rx="1"/>
     <circle cx="-6" cy="-1" r="3.5" stroke-width="1"/>
     <circle cx="7" cy="-1" r="3.5" stroke-width="1"/>
@@ -304,21 +379,38 @@ function figures(cx, by, scale=1) {
 }
 
 function rain(w, h) {
-  let r = '';
-  for(let i=0;i<55;i++){
-    const x=Math.random()*w, y=Math.random()*h;
-    r += `<line x1="${x}" y1="${y}" x2="${x+1.5}" y2="${y+8}" stroke="#2e3e50" stroke-width=".7" opacity=".55"/>`;
+  let r = '<g class="weather-group">';
+  for(let i=0;i<65;i++){
+    const x=Math.random()*w, y=Math.random()*h - 100; // Start higher
+    const delay = Math.random()*2;
+    const dur = 0.5 + Math.random()*0.5;
+    r += `<line class="rain-drop" x1="${x}" y1="${y}" x2="${x+1.5}" y2="${y+8}" stroke="#2e3e50" stroke-width="1" opacity=".55" style="animation-delay:-${delay}s; animation-duration:${dur}s"/>`;
   }
-  return r;
+  return r + '</g>';
 }
 
 function snow(w, h) {
-  let s = '';
-  for(let i=0;i<45;i++){
-    const x=Math.random()*w, y=Math.random()*h;
-    s += `<circle cx="${x}" cy="${y}" r="1.8" fill="#7a7a7a" opacity=".5"/>`;
+  let s = '<g class="weather-group">';
+  for(let i=0;i<60;i++){
+    const x=Math.random()*w, y=Math.random()*h - 50; // Start higher
+    const delay = Math.random()*5;
+    const dur = 2 + Math.random()*3;
+    s += `<circle class="snow-flake" cx="${x}" cy="${y}" r="1.8" fill="#8a8a8a" opacity=".5" style="animation-delay:-${delay}s; animation-duration:${dur}s"/>`;
   }
-  return s;
+  return s + '</g>';
+}
+
+function drawAsh(w, h) {
+  let a = '<g class="ash-layer" style="pointer-events:none;">';
+  for(let i=0;i<40;i++) {
+    const x = Math.random()*w;
+    const y = Math.random()*h - 50;
+    const delay = Math.random()*8;
+    const dur = 4 + Math.random()*6;
+    const size = 0.5 + Math.random()*1.5;
+    a += `<circle class="ash-particle" cx="${x}" cy="${y}" r="${size}" fill="#aaaaaa" opacity="0.6" style="animation-delay:-${delay}s; animation-duration:${dur}s"/>`;
+  }
+  return a + '</g>';
 }
 
 function drawRoad(weather='overcast') {
@@ -344,7 +436,7 @@ function drawRoad(weather='overcast') {
     const t=i/4.5, x=cx+28+t*(cx-55), y=hor+t*(H-hor), sc=.28+t*.75;
     s += tree(x, y, sc);
   }
-  s += figures(cx, H, 1);
+  s += figures(cx, H, 1, G.sceneAction || 'idle', G.actionTarget || 'both');
   if(weather==='rain') s += rain(W,H);
   if(weather==='snow') s += snow(W,H);
   s += '</svg>';
@@ -480,11 +572,15 @@ function drawTitle() {
 }
 
 function getSceneSVG() {
-  if (G.scene === 'house') return drawHouse();
-  if (G.scene === 'bunker') return drawBunker();
-  if (G.scene === 'river') return drawRiver();
-  if (G.scene === 'beach') return drawBeach();
-  return drawRoad(G.weather);
+  let svg = '';
+  if (G.scene === 'house') svg = drawHouse();
+  else if (G.scene === 'bunker') svg = drawBunker();
+  else if (G.scene === 'river') svg = drawRiver();
+  else if (G.scene === 'beach') svg = drawBeach();
+  else svg = drawRoad(G.weather);
+
+  // Inject drifting ash into the SVG before closing tag
+  return svg.replace('</svg>', drawAsh(700, 260) + '</svg>');
 }
 
 // ═══════════════════════════════════════════════
@@ -986,15 +1082,18 @@ function useSupply(type, who) {
     char.hu = clamp(char.hu + 32);
     char.hp = clamp(char.hp + 4);
     showStatus(`${name} ate food. Hunger restored.`, 'ok');
+    triggerSceneAction('eat', who, 900);
   } else if(type==='water' && inv.water > 0) {
     inv.water--;
     char.th = clamp(char.th + 38);
     showStatus(`${name} drank water. Thirst restored.`, 'ok');
+    triggerSceneAction('drink', who, 950);
   } else if(type==='medicine' && inv.medicine > 0) {
     inv.medicine--;
     char.hp = clamp(char.hp + 35);
     char.sa = clamp(char.sa + 8);
     showStatus(`${name} took medicine. Health improved.`, 'ok');
+    triggerSceneAction('heal', who, 1000);
   } else {
     showStatus(`No ${type} remaining!`, 'warn');
     return;
@@ -1052,6 +1151,19 @@ function renderInv() {
   document.getElementById('i-flare').textContent = G.inv.flare;
   const pf = document.getElementById('prog-bar-fill');
   if(pf) pf.style.width = Math.min(100, G.progress)+'%';
+}
+
+
+function triggerSceneAction(action, target='both', duration=900) {
+  clearTimeout(G.actionTimer);
+  G.sceneAction = action;
+  G.actionTarget = target;
+  renderScene();
+  G.actionTimer = setTimeout(() => {
+    G.sceneAction = 'idle';
+    G.actionTarget = 'both';
+    renderScene();
+  }, duration);
 }
 
 function renderScene() {
