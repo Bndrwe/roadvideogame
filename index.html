@@ -1579,6 +1579,37 @@ function typewrite(el, text, speed=22, cb) {
   return el._typeTimer;
 }
 
+
+function scrollNarrativeToTop() {
+  const col = document.getElementById('narrative-col');
+  if(!col) return;
+  col.scrollTop = 0;
+  requestAnimationFrame(() => { col.scrollTop = 0; });
+  setTimeout(() => { col.scrollTop = 0; }, 0);
+}
+
+function resetNarrativePanel() {
+  const nt = document.getElementById('narrative-text');
+  const rt = document.getElementById('result-text');
+  const cl = document.getElementById('choices-list');
+  const cb = document.getElementById('continue-btn');
+  if(nt && nt._typeTimer) {
+    clearInterval(nt._typeTimer);
+    nt._typeTimer = null;
+  }
+  if(nt) nt.textContent = '';
+  if(rt) {
+    rt.textContent = '';
+    rt.style.display = 'none';
+  }
+  if(cl) {
+    cl.innerHTML = '';
+    cl.style.display = 'flex';
+  }
+  if(cb) cb.style.display = 'none';
+  scrollNarrativeToTop();
+}
+
 function showChoices(event) {
   const panel = document.getElementById('choices-list');
   const nt = document.getElementById('narrative-text');
@@ -1586,13 +1617,14 @@ function showChoices(event) {
   if(nt && nt._typeTimer) {
     clearInterval(nt._typeTimer);
     nt._typeTimer = null;
-    nt.textContent = String(event.narrative ?? '');
   }
+  if(nt) nt.textContent = String(event.narrative ?? '');
   panel.innerHTML = '';
   panel.style.display = 'flex';
   document.getElementById('continue-btn').style.display = 'none';
   document.getElementById('result-text').style.display = 'none';
   G.awaitingContinue = false;
+  scrollNarrativeToTop();
 
   event.choices.forEach((c, i) => {
     const btn = document.createElement('button');
@@ -1642,6 +1674,7 @@ function makeChoice(event, idx) {
   const cb = document.getElementById('continue-btn');
   cb.style.display = 'block';
   G.awaitingContinue = true;
+  scrollNarrativeToTop();
 
   const warns = [];
   if(G.man.hp < 20) warns.push('The man is dying.');
@@ -1678,13 +1711,10 @@ function nextTurn() {
   renderScene();
   renderStats();
   renderInv();
-  const rt = document.getElementById('result-text');
   const nt = document.getElementById('narrative-text');
-  const cl = document.getElementById('choices-list');
-  rt.textContent = '';
-  rt.style.display = 'none';
-  cl.innerHTML = '';
-  document.getElementById('continue-btn').style.display = 'none';
+  resetNarrativePanel();
+  nt.textContent = String(ev.narrative ?? '');
+  scrollNarrativeToTop();
   typewrite(nt, ev.narrative, 20, () => showChoices(ev));
 }
 
@@ -1840,16 +1870,13 @@ document.getElementById('intro-continue-btn').addEventListener('click', () => {
   G.lastEvent = ev.id;
   if(ev !== 'COAST') G.usedEvents.add(ev.id);
   const nt = document.getElementById('narrative-text');
-  const rt = document.getElementById('result-text');
-  const cl = document.getElementById('choices-list');
-  rt.textContent = '';
-  rt.style.display = 'none';
-  cl.innerHTML = '';
-  document.getElementById('continue-btn').style.display = 'none';
+  resetNarrativePanel();
   if(ev === 'COAST') {
     triggerCoast();
     return;
   }
+  nt.textContent = String(ev.narrative ?? '');
+  scrollNarrativeToTop();
   typewrite(nt, ev.narrative, 22, () => showChoices(ev));
 });
 
