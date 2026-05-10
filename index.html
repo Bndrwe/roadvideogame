@@ -37,16 +37,16 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 
 
 /* ── GAME ── */
-#game-screen{flex-direction:column;min-height:100vh;max-width:980px;margin:0 auto;width:100%}
+#game-screen{flex-direction:column;height:100vh;max-width:980px;margin:0 auto;width:100%;overflow:hidden}
 #scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505}
 #scene-svg{width:100%;display:block;max-height:260px}
 #day-badge{position:absolute;top:12px;left:16px;font-family:'Special Elite',serif;font-size:12px;letter-spacing:.2em;color:var(--dim)}
 #weather-badge{position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase}
-#mid-row{display:grid;grid-template-columns:1fr 240px;flex:1}
-#narrative-col{padding:24px 28px;border-right:1px solid var(--border);display:flex;flex-direction:column}
+#mid-row{display:grid;grid-template-columns:1fr 240px;flex:1;min-height:0;overflow:hidden}
+#narrative-col{padding:24px 28px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 #narrative-text{font-size:14px;line-height:1.9;color:var(--text);min-height:90px;white-space:pre-wrap;flex:1;margin-bottom:20px}
 #result-text{font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid #222;padding:10px 14px;margin-bottom:16px;line-height:1.8;display:none;white-space:pre-wrap}
-#choices-list{display:flex;flex-direction:column;gap:1px}
+#choices-list{display:flex;flex-direction:column;gap:1px;margin-top:12px;}
 .choice-btn{background:transparent;border:none;border-left:2px solid #1e1e1e;color:var(--dim);font-family:'Courier Prime',monospace;font-size:13px;text-align:left;padding:9px 14px;cursor:pointer;transition:all .2s;line-height:1.5}
 .choice-btn:hover:not(.locked){border-left-color:#555;color:var(--text);background:rgba(255,255,255,.015)}
 .choice-btn.locked{opacity:.3;cursor:not-allowed}
@@ -58,7 +58,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .status-ok{color:var(--good)!important}
 
 /* ── STATS ── */
-#stats-col{padding:20px 16px;background:var(--surface);display:flex;flex-direction:column;gap:0}
+#stats-col{padding:20px 16px;background:var(--surface);display:flex;flex-direction:column;gap:0;min-height:0;overflow-y:auto}
 .char-block{margin-bottom:16px}
 .char-block h3{font-family:'Special Elite',serif;font-size:10px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
 .stat-row{margin-bottom:8px}
@@ -213,6 +213,9 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 #scene-svg svg .heal { animation: healPulse .7s ease-in-out 2; }
 #scene-svg svg .cart-walk { animation: cartRoll .45s ease-in-out 4; }
 
+
+#skip-intro-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 1px solid var(--border); color: var(--dim); font-family: 'Courier Prime', monospace; font-size: 12px; padding: 6px 12px; cursor: pointer; text-transform: uppercase; transition: color 0.3s; }
+#skip-intro-btn:hover { color: var(--text); border-color: #666; }
 </style>
 </head>
 <body>
@@ -227,7 +230,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 </div>
 
 <!-- INTRO -->
-<div id="intro-screen" class="screen">
+<div id="intro-screen" class="screen" style="position:relative;">
+  <button id="skip-intro-btn">Skip</button>
   <div id="intro-text"></div>
   <button id="intro-continue-btn">Continue</button>
 </div>
@@ -607,6 +611,333 @@ function getSceneSVG() {
 // ═══════════════════════════════════════════════
 const EVENTS = [
   {
+    id: 'crit_dehydration', weight: 0, progress: 0, scene: 'road',
+    narrative: `The thirst is a dry weight in your throat. You stumble over a dry riverbed. There is a small puddle of stagnant, brown water. It smells foul.`,
+    choices: [
+      {text: 'Drink it anyway. We have to.',
+       apply(g){ g.scene='road'; g.man.th=clamp(g.man.th+20); g.boy.th=clamp(g.boy.th+20); g.man.hp=clamp(g.man.hp-25); g.boy.hp=clamp(g.boy.hp-25); this._r=`You drink the foul water. It quenches the burning for a moment, but violent sickness follows. You lose health.` },
+       get result(){return this._r}},
+      {text: 'Leave it. We keep moving.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-10); this._r=`You pull the boy away. The desperation grows. Sanity drops.` },
+       get result(){return this._r}}
+    ]
+  },
+  {
+    id: 'crit_starvation', weight: 0, progress: 0, scene: 'road',
+    narrative: `You have eaten nothing for days. The boy is too weak to walk properly. You spot a dead creature by the road, rotting and swarming with flies.`,
+    choices: [
+      {text: 'Cook it. Meat is meat.',
+       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu+30); g.boy.hu=clamp(g.boy.hu+30); g.man.sa=clamp(g.man.sa-30); g.boy.sa=clamp(g.boy.sa-30); this._r=`You manage to roast it. It fills your stomachs but breaks something inside you. Massive sanity loss.` },
+
+       get result(){return this._r}},
+      {text: 'We are not animals. Keep moving.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-10); g.boy.hp=clamp(g.boy.hp-10); this._r=`You leave it. The hunger gnaws away at your very life force.` },
+       get result(){return this._r}}
+    ]
+  },
+  {
+    id: 'stranger_campfire', weight: 1.5, progress: 1, scene: 'road',
+    narrative: `You smell woodsmoke before you see the fire. A single figure huddled by the flames in the gray twilight. He hasn't seen you yet.`,
+    choices: [
+      {text: 'Approach carefully.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.5){ g.inv.food++; g.man.sa=clamp(g.man.sa+5); this._r=`You share his fire. He doesn't say much, but gives you a can of beans before slipping away in the night.` }
+         else{ g.man.hp=clamp(g.man.hp-15); this._r=`The man panics and swings a piece of iron at you. You manage to fight him off, but take a bad hit to the shoulder.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Avoid him entirely.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-2); this._r=`You circle wide through the dead woods. Better safe than sorry.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'abandoned_car', weight: 1.5, progress: 1, scene: 'road',
+    narrative: `A rusted sedan sits half in the ditch. The tires are gone, but the trunk is closed.`,
+    choices: [
+      {text: 'Force the trunk open.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.4){ g.inv.water+=2; g.inv.medicine++; this._r=`Inside, wrapped in a moldy blanket: two bottles of water and some bandages.` }
+         else{ g.man.hp=clamp(g.man.hp-10); this._r=`You pry it open with a tire iron. It snaps back and smashes your hand. The trunk is empty.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Check the glovebox.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.6){ g.inv.food++; this._r=`You find a single sealed protein bar buried under old maps.` }
+         else{ g.boy.sa=clamp(g.boy.sa-5); this._r=`Only old family photos. The boy looks at them for a long time. You pull him away.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Keep walking.',
+       apply(g){ g.scene='road'; this._r=`You don't waste the energy.` }, get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'dead_orchard', weight: 1, progress: 1, scene: 'road',
+    narrative: `You walk through what used to be an apple orchard. The trees are black, twisted shapes. The ash here is deep.`,
+    choices: [
+      {text: 'Dig in the ash for anything preserved.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.7){ g.inv.food+=2; this._r=`Miraculously, you find two sealed jars of applesauce buried near a root.` }
+         else{ g.man.sa=clamp(g.man.sa-8); g.man.hp=clamp(g.man.hp-5); this._r=`You spend hours digging. Your hands bleed. There is absolutely nothing.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'It is a waste of time.',
+       apply(g){ g.scene='road'; this._r=`You pass through the dead trees like ghosts.` }, get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'stray_dog', weight: 0.8, progress: 1, scene: 'road',
+    narrative: `A starving dog follows you at a distance. Ribs showing, tail tucked. It stops when you stop.`,
+    choices: [
+      {text: 'Throw it some food. (-1 Food)',
+       apply(g){ g.scene='road'; if(g.inv.food>0){ g.inv.food--; g.boy.sa=clamp(g.boy.sa+15); this._r=`The boy smiles as the dog eats. It doesn't come closer, but the boy's spirits are lifted.` } else { this._r=`You have no food to spare. The dog eventually wanders off.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Scare it away.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-8); this._r=`You throw a rock. The dog yelps and runs. The boy cries silently.` },
+       get result(){return this._r||'...'} },
+      {text: 'Kill it for meat.',
+       apply(g){ g.scene='road'; g.inv.food+=3; g.boy.sa=clamp(g.boy.sa-25); g.man.sa=clamp(g.man.sa-15); this._r=`You catch it with a rock and finish it with the knife. The meat keeps you alive, but the boy refuses to speak to you for days.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'derailed_train', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `A rusted freight train derailed off a bridge. The boxcars are spilled like giant metal bricks down the embankment.`,
+    choices: [
+      {text: 'Climb down and search the cars.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.5){ g.inv.food+=2; g.inv.water+=2; this._r=`Most are empty, but you find a sealed crate with bottled water and some rations. A rare victory.` }
+         else{ g.man.hp=clamp(g.man.hp-15); this._r=`You slip on the wet, rusted metal and fall hard. The cars are empty. You took a bad hit for nothing.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Too risky. Stay on the road.',
+       apply(g){ g.scene='road'; this._r=`A broken leg here means death. You keep moving.` }, get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'blind_man', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `An old man shuffling down the road. His eyes are clouded over with cataracts. He taps his way with a stick.\n\n"Is there someone there?" he croaks.`,
+    choices: [
+      {text: 'Give him food. (-1 Food)',
+       apply(g){ g.scene='road'; if(g.inv.food>0){ g.inv.food--; g.karma+=10; g.boy.sa=clamp(g.boy.sa+15); this._r=`You give him a tin of fruit. He eats it like a starving animal. The boy watches, relieved by your mercy.` } else { this._r=`You have nothing to give. You walk past him in silence.` } },
+       get result(){return this._r||'...'} },
+      {text: 'Walk past him.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-10); g.karma-=5; this._r=`You ignore him. The boy looks back repeatedly until the old man fades into the ash.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'ash_storm', weight: 1.5, progress: 1, scene: 'road',
+    narrative: `The wind picks up, howling through the dead trees. A massive wall of gray ash sweeps toward you, blotting out the faint sun.`,
+    choices: [
+      {text: 'Take cover in a ditch.',
+       apply(g){ g.scene='road'; g.man.th=clamp(g.man.th-10); g.boy.th=clamp(g.boy.th-10); g.man.sa=clamp(g.man.sa-5); this._r=`You pull a tarp over yourselves. You breathe in the fine dust. It coats your throat, making you terribly thirsty.` },
+       get result(){return this._r||'...'} },
+      {text: 'Keep pushing through it.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-10); g.boy.hp=clamp(g.boy.hp-10); g.man.sa=clamp(g.man.sa-10); this._r=`The ash blinds and chokes you. It feels like breathing glass. You both lose health.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'broken_toy', weight: 1, progress: 1, scene: 'road',
+    narrative: `Half-buried in the soot on the side of the road is a small plastic truck. Its paint is faded but the wheels still turn.`,
+    choices: [
+      {text: 'Let the boy keep it.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa+15); g.man.sa=clamp(g.man.sa+5); this._r=`He rolls it back and forth on the asphalt. For a brief moment, he is just a child. It warms your heart.` },
+       get result(){return this._r||'...'} },
+      {text: 'Leave it. Extra weight.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-10); this._r=`"We can't carry trash," you tell him. He leaves it, but his shoulders slump.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'frozen_waterfall', weight: 0.8, progress: 1, scene: 'road',
+    narrative: `The road winds through a rocky gorge. A waterfall has frozen solid, a cascade of pale blue ice hanging suspended in time.`,
+    choices: [
+      {text: 'Break off some ice to melt.',
+       apply(g){ g.scene='road'; g.inv.water+=2; g.boy.sa=clamp(g.boy.sa+10); this._r=`You chip away chunks of the clean ice. The boy marvels at the frozen shapes. A quiet, peaceful moment.` },
+       get result(){return this._r||'...'} },
+      {text: 'Just watch it for a minute.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa+10); g.boy.sa=clamp(g.boy.sa+10); this._r=`You stand in silence. It is one of the few beautiful things left in the world.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'dead_refugees', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `A group of people huddled together beneath an overpass. They have been dead for a very long time, frozen in the ash.`,
+    choices: [
+      {text: 'Search their pockets.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-15); g.karma-=5; const r=Math.random(); 
+         if(r>.5){ g.inv.bullets+=1; this._r=`You find a single bullet wrapped in a handkerchief. The boy turns away in disgust.` }
+         else{ this._r=`You search through rags and bones but find nothing. You only soil your own soul.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Leave them in peace.',
+       apply(g){ g.scene='road'; g.karma+=5; this._r=`You bow your head and walk past. Some lines you won't cross.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'wet_wood', weight: 1.3, progress: 1, scene: 'road',
+    narrative: `Night is falling. The only wood you can find is damp and half-rotted. The cold is already biting at your fingers.`,
+    choices: [
+      {text: 'Spend hours trying to light it.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-5); g.man.hu=clamp(g.man.hu-10); g.man.sa=clamp(g.man.sa-5); this._r=`You exhaust yourself blowing on embers. You get a weak, smoky fire, but you are drained of energy.` },
+       get result(){return this._r||'...'} },
+      {text: 'Sleep cold.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-12); g.boy.hp=clamp(g.boy.hp-12); this._r=`You huddle together under the blankets. The freezing dark saps your health heavily overnight.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'ruined_pharmacy', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `An old drugstore in a dead town. The shelves were stripped bare years ago. Debris covers the floor.`,
+    choices: [
+      {text: 'Search the back room.',
+       apply(g){ g.scene='house'; const r=Math.random(); 
+         if(r>.7){ g.inv.medicine+=2; this._r=`Hidden beneath a fallen filing cabinet, you find an untouched first-aid box!` }
+         else{ g.man.sa=clamp(g.man.sa-5); this._r=`Nothing but empty pill bottles and rat droppings. A waste of daylight.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Keep moving.',
+       apply(g){ g.scene='road'; this._r=`It's a husk. You don't bother.` }, get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'broken_bridge', weight: 1.4, progress: 1, scene: 'road',
+    narrative: `The highway bridge has collapsed into the freezing river below. You have to cross to continue south.`,
+    choices: [
+      {text: 'Wade through the icy water.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-15); g.boy.hp=clamp(g.boy.hp-15); this._r=`The water is shockingly cold. You carry the boy most of the way, but the freezing temperatures damage your health.` },
+       get result(){return this._r||'...'} },
+      {text: 'Take the long detour through the woods.',
+       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu-15); g.boy.hu=clamp(g.boy.hu-15); g.man.th=clamp(g.man.th-15); this._r=`You spend two extra days hiking around the ravine. You burn through significant hunger and thirst.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'blood_cough', weight: 0.7, progress: 1, scene: 'road',
+    narrative: `You are seized by a violent fit of coughing. When you pull your hand away from your mouth, the rag is speckled with bright red blood.`,
+    choices: [
+      {text: 'Hide it from the boy.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-10); g.man.sa=clamp(g.man.sa-15); this._r=`You wash the rag in the snow. You know you are dying. The burden of the secret weighs heavily on your mind.` },
+       get result(){return this._r||'...'} },
+      {text: 'Let him see.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-10); g.boy.sa=clamp(g.boy.sa-20); this._r=`The boy sees the blood. He doesn't say anything, but the terror in his eyes is unmistakable.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'crying_woman', weight: 1, progress: 1, scene: 'road',
+    narrative: `You hear ragged sobbing coming from a ruined house off the road.`,
+    choices: [
+      {text: 'Investigate.',
+       apply(g){ g.scene='house'; g.man.hp=clamp(g.man.hp-20); g.man.sa=clamp(g.man.sa-10); this._r=`It's an ambush. Three men rush you. You fire a shot to scare them, but take a severe beating before escaping.` },
+       get result(){return this._r||'...'} },
+      {text: 'Sneak away quickly.',
+       apply(g){ g.scene='road'; this._r=`You grab the boy's hand and move fast. In this world, crying is often a trap.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'fallen_trees', weight: 1.3, progress: 1, scene: 'road',
+    narrative: `A massive dead oak has fallen across the road, creating a barricade of splintered wood.`,
+    choices: [
+      {text: 'Climb over it.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.5){ g.man.th=clamp(g.man.th-5); this._r=`You painstakingly lift the cart over the trunk. It takes effort but you make it.` }
+         else{ g.boy.hp=clamp(g.boy.hp-10); this._r=`The boy slips and scrapes his leg badly on the bark. You bandage it, but it looks painful.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Hack a path with your tools.',
+       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu-10); g.man.th=clamp(g.man.th-10); this._r=`You chop through the weaker branches to clear a path for the cart. It makes you very tired.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'looted_library', weight: 0.9, progress: 1, scene: 'road',
+    narrative: `An old public library. The books have mostly been burned for fuel by scavengers. Only a few scattered pages remain.`,
+    choices: [
+      {text: 'Read a page to the boy.',
+       apply(g){ g.scene='house'; g.boy.sa=clamp(g.boy.sa+10); g.man.sa=clamp(g.man.sa+10); this._r=`It's a fragment of an old story about animals. The boy listens intently. It feels like a piece of the old world has returned.` },
+       get result(){return this._r||'...'} },
+      {text: 'Gather pages for your own fire.',
+       apply(g){ g.scene='house'; g.man.sa=clamp(g.man.sa-5); g.boy.sa=clamp(g.boy.sa-5); this._r=`You stuff the pages into your pack. Burning the written word feels wrong, but you need the warmth.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'stuck_truck', weight: 1.1, progress: 1, scene: 'road',
+    narrative: `A delivery truck jackknifed on the interstate. The back doors are secured with a heavy padlock.`,
+    choices: [
+      {text: 'Shoot the lock. (-1 Bullet)',
+       apply(g){ g.scene='road'; 
+         if(g.inv.bullets>0){ g.inv.bullets--; g.inv.food+=3; this._r=`The gunshot rings out. Inside, you find three cans of stew! A fantastic haul.` } 
+         else { this._r=`You don't have bullets to spare. You can't open it.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Try to pry it with a bar.',
+       apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-5); this._r=`You strain until your back pops, but the lock holds. You have to leave it.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'wild_mushrooms', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `Growing in the damp ash beneath a rotting log is a cluster of pale mushrooms. You haven't seen anything alive in weeks.`,
+    choices: [
+      {text: 'Eat them.',
+       apply(g){ g.scene='road'; const r=Math.random(); 
+         if(r>.5){ g.man.hu=clamp(g.man.hu+15); g.boy.hu=clamp(g.boy.hu+15); this._r=`They taste like dirt, but they don't make you sick. They dull the hunger.` }
+         else{ g.man.hp=clamp(g.man.hp-20); g.boy.hp=clamp(g.boy.hp-20); this._r=`Violent cramps hit an hour later. You vomit on the side of the road. Poisonous.` }
+       }, get result(){return this._r||'...'} },
+      {text: 'Leave them.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-2); this._r=`You walk away. The hunger gnaws at you, but it's better than dying from poison.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'baby_spit', weight: 1.2, progress: 1, scene: 'road',
+    narrative: `A gutted camp. Smoldering fire. Something is turning on a spit over the coals. As you get closer, the boy realizes what it is and screams.`,
+    choices: [
+      {text: 'Grab the boy and run.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-25); g.boy.sa=clamp(g.boy.sa-30); this._r=`You drag him away. The image is burned into your mind forever. True horror.` },
+       get result(){return this._r||'...'} },
+      {text: 'Cover his eyes and back away.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-25); g.boy.sa=clamp(g.boy.sa-15); this._r=`You shield his eyes, but it's too late. The nightmare of this world is absolute.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'lightning_strike', weight: 1, progress: 1, scene: 'road',
+    narrative: `A freak thunderstorm hits. A bolt of lightning strikes a dead tree fifty yards away, showering sparks.`,
+    choices: [
+      {text: 'Use the burning wood to cook.',
+       apply(g){ g.scene='road'; g.inv.food+=1; g.boy.sa=clamp(g.boy.sa+5); this._r=`You manage to start a small fire from the struck tree and warm a can of beans. A lucky break.` },
+       get result(){return this._r||'...'} },
+      {text: 'Hide from the storm.',
+       apply(g){ g.scene='road'; g.man.th=clamp(g.man.th+20); g.boy.th=clamp(g.boy.th+20); this._r=`You set up a tarp to catch the rain. It provides excellent clean water.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'thief_on_beach', weight: 5, progress: 95, scene: 'beach',
+    condition: g => g.reachedCoast,
+    narrative: `You leave the boy sick in the dunes while you walk. When you return, a ragged man has his hands on your cart. He holds a knife.`,
+    choices: [
+      {text: 'Draw your pistol and make him strip.', req:'bullets',
+       apply(g){ g.inv.bullets--; g.man.sa=clamp(g.man.sa-10); g.boy.sa=clamp(g.boy.sa-20); g.karma-=20; this._r=`"Take your clothes off," you say. You take everything he has. The boy cries for you not to do it. You leave the man naked on the cold beach to die.` },
+       get result(){return this._r||'...'} },
+      {text: 'Shoot him dead.', req:'bullets',
+       apply(g){ g.inv.bullets--; g.man.sa=clamp(g.man.sa-20); g.boy.sa=clamp(g.boy.sa-25); g.karma-=30; this._r=`You don't hesitate. You shoot him in the chest. He falls in the sand. The boy is terrified of you.` },
+       get result(){return this._r||'...'} },
+      {text: 'Let him take some food and leave.',
+       apply(g){ g.inv.food = Math.max(0, g.inv.food-2); g.boy.sa=clamp(g.boy.sa+10); g.karma+=15; this._r=`You lower the gun. He takes a few cans and runs. The boy is thankful you didn't kill him.` },
+       get result(){return this._r||'...'} }
+    ]
+  },
+  {
+    id: 'ship_on_beach', weight: 5, progress: 90, scene: 'beach',
+    condition: g => g.reachedCoast && !g.usedEvents.has('ship_on_beach'),
+    narrative: `A massive, rusted cargo ship lies washed up on the gray sand. The Spanish name "Pajaro de Esperanza" is faintly visible on the bow.`,
+    choices: [
+      {text: 'Wade out and climb aboard.',
+       apply(g){ g.scene='beach'; g.inv.flare=1; g.inv.food+=4; g.inv.water+=4; g.man.hp=clamp(g.man.hp-10); this._r=`You explore the tilted corridors. The water is freezing, but you find sealed food, fresh water, and a flare pistol.` },
+       get result(){return this._r||'...'} },
+      {text: 'Too dangerous. It might shift.',
+       apply(g){ g.scene='beach'; this._r=`You watch the massive iron hull from the shore. You stay safe, but find nothing.` },
+       get result(){return this._r||'...'} }
+    ]
+  },  {
     id:'arrow_shot', weight:5, progress:1,
     condition: g => g.reachedCoast && g.progress > 85,
     narrative:`A sudden sharp sound. The man staggered and fell. An arrow in his leg.\n\nSomeone was moving in the ruins of a house above the road. The boy screamed.`,
@@ -854,15 +1185,19 @@ const EVENTS = [
       {text:'Search the cellar.',
        apply(g){
          g.scene='house';const r=Math.random();
-         if(r>.35){g.inv.food+=3;g.inv.water+=1;this._r=`Mason jars on a shelf. Preserved vegetables, old but sealed. Water in a clay crock, still clean. You fill your containers and load the jars carefully. The boy carries three of them.`}
-         else{g.man.hp=clamp(g.man.hp-15);this._r=`You fall through rotten floorboards. The boy hauls you out. You spend the afternoon resting, shaking, while he sits beside you.`}
+         if(r>.66){g.inv.food+=3;g.inv.water+=1;this._r=`Mason jars on a shelf. Preserved vegetables, old but sealed. Water in a clay crock, still clean. You fill your containers.`}
+         else if(r>.33){g.inv.food+=2;g.inv.water+=2;this._r=`You find some canned peaches and bottled water hidden behind fallen debris.`}
+         else if(r>.15){g.man.hp=clamp(g.man.hp-15);this._r=`You fall through rotten floorboards in the dark. The boy hauls you out. You spend the afternoon resting.`}
+         else {g.man.hp=clamp(g.man.hp-10);this._r=`You trip in the pitch black cellar, cutting your arm on rusted metal.`}
        },
        get result(){return this._r||'...'}},
       {text:'Search upstairs.',
        apply(g){
          g.scene='house';const r=Math.random();
-         if(r>.5){g.inv.medicine++;g.inv.food+=1;this._r=`A medicine cabinet: aspirin, gauze, antiseptic. Useful. A can of soup that was somehow missed.`}
-         else{g.man.sa=clamp(g.man.sa-12);this._r=`Someone died in the bedroom. A long time ago. You look away and come back downstairs.\n\n"Papa? Did you find anything?"\n\n"No," you say. "Nothing here."`}
+         if(r>.66){g.inv.medicine++;g.inv.food+=1;this._r=`A medicine cabinet: aspirin, gauze, antiseptic. Useful. A can of soup that was somehow missed.`}
+         else if(r>.33){g.inv.medicine+=2;this._r=`You find a partially used first aid kit beneath a bed.`}
+         else if(r>.15){g.man.sa=clamp(g.man.sa-12);this._r=`Someone died in the bedroom. A long time ago. You look away and come back downstairs.`}
+         else {g.man.sa=clamp(g.man.sa-15);this._r=`Mummified remains in a child's bed. You hurry out before the boy can see.`}
        },
        get result(){return this._r||'...'}},
       {text:'Too dangerous. Keep moving.',
@@ -876,7 +1211,7 @@ const EVENTS = [
     choices:[
       {text:'Open it.',
        apply(g){
-         g.scene='bunker';g.inv.food+=8;g.inv.water+=4;g.inv.medicine+=2;g.man.hp=clamp(g.man.hp+15);g.boy.hp=clamp(g.boy.hp+15);
+         g.scene='bunker';g.day+=2;g.inv.food+=8;g.inv.water+=4;g.inv.medicine+=2;g.man.hp=clamp(g.man.hp+15);g.boy.hp=clamp(g.boy.hp+15);
          g.man.hu=clamp(g.man.hu+25);g.boy.hu=clamp(g.boy.hu+25);g.man.th=clamp(g.man.th+20);g.boy.th=clamp(g.boy.th+20);
          g.man.sa=clamp(g.man.sa+20);g.boy.sa=clamp(g.boy.sa+25);g.karma+=5;
        },
@@ -1049,6 +1384,11 @@ function applyDailyDecay() {
   b.hu = clamp(b.hu - 5);
   m.th = clamp(m.th - 8);
   b.th = clamp(b.th - 7);
+
+  // Daily sanity decrease from monotony
+  m.sa = clamp(m.sa - 3);
+  b.sa = clamp(b.sa - 2);
+
   if(m.hu < 20) m.hp = clamp(m.hp - 6);
   if(b.hu < 20) b.hp = clamp(b.hp - 5);
   if(m.th < 15) m.hp = clamp(m.hp - 9);
@@ -1096,6 +1436,11 @@ function useSupply(type, who) {
   const inv = G.inv;
   const char = who === 'man' ? G.man : G.boy;
   const name = who === 'man' ? 'You' : 'The Boy';
+
+  if(type==='food' && char.hu >= 100) return;
+  if(type==='water' && char.th >= 100) return;
+  if(type==='medicine' && char.hp >= 100) return;
+
   if(type==='food' && inv.food > 0) {
     inv.food--;
     char.hu = clamp(char.hu + 32);
@@ -1104,18 +1449,16 @@ function useSupply(type, who) {
     triggerSceneAction('eat', who, 900);
   } else if(type==='water' && inv.water > 0) {
     inv.water--;
-    char.th = clamp(char.th + 38);
+    char.th = clamp(char.th + 32);
+    char.hp = clamp(char.hp + 2);
     showStatus(`${name} drank water. Thirst restored.`, 'ok');
-    triggerSceneAction('drink', who, 950);
+    triggerSceneAction('drink', who, 900);
   } else if(type==='medicine' && inv.medicine > 0) {
     inv.medicine--;
-    char.hp = clamp(char.hp + 35);
-    char.sa = clamp(char.sa + 8);
-    showStatus(`${name} took medicine. Health improved.`, 'ok');
-    triggerSceneAction('heal', who, 1000);
-  } else {
-    showStatus(`No ${type} remaining!`, 'warn');
-    return;
+    char.hp = clamp(char.hp + 45);
+    char.sa = clamp(char.sa + 10);
+    showStatus(`${name} used medicine. Health restored.`, 'ok');
+    triggerSceneAction('meds', who, 900);
   }
   renderStats();
   renderInv();
@@ -1223,6 +1566,16 @@ function typewrite(el, text, speed=22, cb) {
       if(cb && el._typeRunId === runId) cb();
     }
   }, speed);
+
+  el._skipTypewrite = () => {
+    if (el._typeTimer && el._typeRunId === runId) {
+      clearInterval(el._typeTimer);
+      el._typeTimer = null;
+      el.textContent = finalText;
+      if (cb) cb();
+    }
+  };
+
   return el._typeTimer;
 }
 
@@ -1339,7 +1692,6 @@ function nextTurn() {
 function triggerCoast() {
   G.reachedCoast = true;
   G.scene = 'beach';
-  G.inv.flare = 1; // Add flare gun found on a ship
   renderScene();
   showScreen('cutscene-screen');
   document.getElementById('cutscene-svg-wrap').innerHTML = drawBeach();
@@ -1446,6 +1798,15 @@ document.getElementById('start-btn').addEventListener('click', () => {
   showScreen('intro-screen');
   const introBtn = document.getElementById('intro-continue-btn');
   introBtn.style.display = 'none';
+
+  const skipBtn = document.getElementById('skip-intro-btn');
+  skipBtn.style.display = 'block';
+  skipBtn.onclick = () => {
+      const el = document.getElementById('intro-text');
+      if(el && el._skipTypewrite) {
+          el._skipTypewrite();
+      }
+  };
   const intro = `You are the man. When you wake in the woods in the dark and the cold of the night you reach out to touch the boy sleeping beside you.
 
 Sleeps that are not like sleep.
@@ -1464,6 +1825,9 @@ You and the boy will follow it.
 • Click choices to respond to events on the road.]`;
   typewrite(document.getElementById('intro-text'), intro, 30, () => {
     introBtn.style.display = 'inline-block';
+    if (document.getElementById('skip-intro-btn')) {
+        document.getElementById('skip-intro-btn').style.display = 'none';
+    }
   });
 });
 
