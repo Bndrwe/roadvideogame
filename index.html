@@ -58,7 +58,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .status-ok{color:var(--good)!important}
 
 /* ── STATS ── */
-#stats-col{padding:20px 16px;background:var(--surface);display:flex;flex-direction:column;gap:0;min-height:0;overflow-y:auto}
+#stats-col{padding:140px 16px 20px;background:var(--surface);display:block;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain}
 .char-block{margin-bottom:16px}
 .char-block h3{font-family:'Special Elite',serif;font-size:10px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
 .stat-row{margin-bottom:8px}
@@ -73,7 +73,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .bar-fill.crit{animation:blink 1.2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 .char-divider{height:1px;background:var(--border);margin:8px 0 16px}
-#karma-block{margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+#karma-block{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
 #karma-block .klbl{font-size:10px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
 #karma-text{font-family:'Special Elite',serif;font-size:12px;color:var(--dim);font-style:italic}
 #supply-btns{margin-top:16px;display:flex;flex-direction:column;gap:4px}
@@ -251,7 +251,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
       <button id="continue-btn">— continue —</button>
       <div id="status-line"></div>
     </div>
-    <div id="stats-col"><div class="stats-scroll-inner">
+    <div id="stats-col">
       <div class="char-block">
         <h3>The Man (You)</h3>
         <div class="stat-row"><div class="stat-lbl"><span>Health</span><span class="stat-num" id="m-hp-n">80</span></div><div class="bar-bg hp"><div class="bar-fill hp" id="m-hp-b" style="width:80%"></div></div></div>
