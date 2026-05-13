@@ -628,8 +628,8 @@ function getSceneSVG() {
 const EVENTS = [
   {
     id: 'crit_dehydration', weight: (g) => {
-    if (g.man.th < 15 || g.boy.th < 15) return 12;  // very likely when critical
-    if (g.man.th < 40 || g.boy.th < 40) return 4;   // moderately likely when low
+    if (g.man.th < 5 || g.boy.th < 5) return 12;  // very likely when critical
+    if ((g.man.th < 15 || g.boy.th < 15) && (g.man.th < 40 && g.boy.th < 40)) return 6;  // moderately likely when one is low and other is not high
     return 0;                                        // doesn't happen otherwise
   }, progress: 0, scene: 'road',
     narrative: `The thirst is a dry weight in your throat. You stumble over a dry riverbed. There is a small puddle of stagnant, brown water. It smells foul.`,
@@ -638,20 +638,20 @@ const EVENTS = [
        apply(g){ g.scene='road'; g.man.th=clamp(g.man.th+20); g.boy.th=clamp(g.boy.th+20); g.man.hp=clamp(g.man.hp-25); g.boy.hp=clamp(g.boy.hp-25); this._r=`You drink the foul water. It quenches the burning for a moment, but violent sickness follows. You lose health.` },
        get result(){return this._r}},
       {text: 'Leave it. We keep moving.',
-       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-10); this._r=`You pull the boy away. The desperation grows. Sanity drops.` },
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-10); this._r=`You pull the boy away. The desperation grows.` },
        get result(){return this._r}}
     ]
   },
   {
     id: 'crit_starvation', weight: (g) => {
-    if (g.man.hu < 15 || g.boy.hu < 15) return 12;  // very likely when critical
-    if (g.man.hu < 40 || g.boy.hu < 40) return 4;   // moderately likely when low
+    if (g.man.hu < 5 || g.boy.hu < 5) return 12;  // very likely when critical
+    if (g.man.hu < 15 || g.boy.hu < 15 && (g.man.hu < 40 && g.boy.hu < 40)) return 6;  // moderately likely when one is low and other is not high
     return 0;                                        // doesn't happen otherwise
   }, progress: 0, scene: 'road',
     narrative: `You have eaten nothing for days. The boy is too weak to walk properly. You spot a dead creature by the road, rotting and swarming with flies.`,
     choices: [
       {text: 'Cook it. Meat is meat.',
-       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu+30); g.boy.hu=clamp(g.boy.hu+30); g.man.sa=clamp(g.man.sa-30); g.boy.sa=clamp(g.boy.sa-30); this._r=`You manage to roast it. It fills your stomachs but breaks something inside you. Massive sanity loss.` },
+       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu+30); g.boy.hu=clamp(g.boy.hu+30); g.man.sa=clamp(g.man.sa-30); g.boy.sa=clamp(g.boy.sa-30); this._r=`You manage to roast it. It fills your stomachs but breaks something inside you.` },
 
        get result(){return this._r}},
       {text: 'We are not animals. Keep moving.',
@@ -715,7 +715,7 @@ const EVENTS = [
        apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-8); this._r=`You throw a rock. The dog yelps and runs. The boy cries silently.` },
        get result(){return this._r||'...'} },
       {text: 'Kill it for meat.',
-       apply(g){ g.scene='road'; g.inv.food+=3; g.boy.sa=clamp(g.boy.sa-25); g.man.sa=clamp(g.man.sa-15); this._r=`You catch it with a rock and finish it with the knife. The meat keeps you alive, but the boy refuses to speak to you for days.` },
+       apply(g){ g.scene='road'; g.inv.food+=2; g.boy.sa=clamp(g.boy.sa-25); g.man.sa=clamp(g.man.sa-15); this._r=`You catch it with a rock and finish it with the knife. The meat keeps you alive, but the boy refuses to speak to you for days.` },
        get result(){return this._r||'...'} }
     ]
   },
@@ -827,7 +827,7 @@ const EVENTS = [
        apply(g){ g.scene='road'; g.man.hp=clamp(g.man.hp-15); g.boy.hp=clamp(g.boy.hp-15); this._r=`The water is shockingly cold. You carry the boy most of the way, but the freezing temperatures damage your health.` },
        get result(){return this._r||'...'} },
       {text: 'Take the long detour through the woods.',
-       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu-15); g.boy.hu=clamp(g.boy.hu-15); g.man.th=clamp(g.man.th-15); this._r=`You spend two extra days hiking around the ravine. You burn through significant hunger and thirst.` },
+       apply(g){ g.scene='road'; g.man.hu=clamp(g.man.hu-15); g.boy.hu=clamp(g.boy.hu-15); g.man.th=clamp(g.man.th-15); g.boy.th=clamp(g.boy.th-15); this._r=`You spend two extra days hiking around the ravine. You burn through significant hunger and thirst.` },
        get result(){return this._r||'...'} }
     ]
   },
@@ -887,7 +887,7 @@ const EVENTS = [
     choices: [
       {text: 'Shoot the lock. (-1 Bullet)',
        apply(g){ g.scene='road'; 
-         if(g.inv.bullets>0){ g.inv.bullets--; g.inv.food+=3; this._r=`The gunshot rings out. Inside, you find three cans of stew! A fantastic haul.` } 
+         if(g.inv.bullets>0){ g.inv.bullets--; g.inv.water+=3; this._r=`The gunshot rings out. Inside, you find three water bottles! A fantastic haul.` } 
          else { this._r=`You don't have bullets to spare. You can't open it.` }
        }, get result(){return this._r||'...'} },
       {text: 'Try to pry it with a bar.',
@@ -897,9 +897,9 @@ const EVENTS = [
   },
   {
     id: 'wild_mushrooms', weight: (g) => {
-    if (g.man.hu < 15 || g.boy.hu < 15) return 5;
-    if (g.man.hu < 40 || g.boy.hu < 40) return 2;
-    return 1;
+    if (g.man.hu < 5 || g.boy.hu < 5) return 4;
+    if (g.man.hu < 25 || g.boy.hu < 25) return 1.5;
+    return 0.5;
   }, progress: 1, scene: 'road',
     narrative: `Growing in the damp ash beneath a rotting log is a cluster of pale mushrooms. You haven't seen anything alive in weeks.`,
     choices: [
@@ -992,10 +992,10 @@ const EVENTS = [
     narrative:`Half-buried in the ash at the roadside. A cola can, still sealed.\n\nPapa. The boy was already beside it.`,
     choices:[
       {text:'Give it to the boy.',
-       apply(g){g.boy.sa=clamp(g.boy.sa+18);g.boy.hu=clamp(g.boy.hu+6);g.karma+=6},
+       apply(g){g.boy.sa=clamp(g.boy.sa+18);g.boy.th=clamp(g.boy.th+6);g.karma+=6},
        result:`You brush it clean and open it for him. He drinks slowly, eyes wide over the rim.\n\n"It's so good, Papa."\n\nHe is right. It is.`},
       {text:'Drink it yourself.',
-       apply(g){g.man.sa=clamp(g.man.sa+10);g.man.hu=clamp(g.man.hu+6)},
+       apply(g){g.man.sa=clamp(g.man.sa+10);g.man.th=clamp(g.man.th+6)},
        result:`You drink it standing in the ash-gray road. It is sweet and cold and real. You feel something that might have been happiness once.`},
       {text:'Leave it. Could be a trap.',
        apply(g){g.man.sa=clamp(g.man.sa-5)},
@@ -1011,8 +1011,8 @@ const EVENTS = [
        result:`You put them in the cart. They clank together as you walk. It is enough for now.`},
       {text:'Search the store nearby.',
        apply(g){
-         if(Math.random()>.45){g.inv.food+=3;g.inv.water+=1;g.progress+=1;
-           this._r=`The store has been picked clean but you find three more cans behind a collapsed shelf. A sealed water bottle. You take them all.`}
+         if(Math.random()>.45){g.inv.food+=3;g.inv.water+=2;g.progress+=1;
+           this._r=`The store has been picked clean but you find three more cans behind a collapsed shelf. Two sealed water bottles. You take them all.`}
          else{g.man.th=clamp(g.man.th-8);g.boy.th=clamp(g.boy.th-6);
            this._r=`You spend an hour searching. It is empty. Completely empty. The light is getting thin when you finally give up.`}
        },
@@ -1044,7 +1044,7 @@ const EVENTS = [
       {text:'Search the ruins for supplies.',
        apply(g){
          const r=Math.random();
-         if(r>.6){g.inv.food+=2;this._r=`Among the wreckage, a sealed metal box. Inside: two cans of soup, a box of crackers. You take them quickly and go.`}
+         if(r>.6){g.inv.food+=2;this._r=`Among the wreckage, a sealed metal box. Inside: two cans of soup. You take them quickly and go.`}
          else if(r>.3){g.inv.water+=1;this._r=`A case of bottled water beneath a collapsed shelf. Most are broken. One intact. You take it.`}
          else{g.man.hp=clamp(g.man.hp-8);this._r=`A floor gives way. You catch yourself but something tears in your shoulder. The boy helps you up. You find nothing.`}
        },
@@ -1061,7 +1061,7 @@ const EVENTS = [
       {text:'Search carefully.',
        apply(g){
          const r=Math.random();
-         if(r>.5){g.inv.food+=2;g.inv.water+=1;this._r=`Two cans they missed. A half-full water container. You fill your bottles and take the cans.`}
+         if(r>.5){g.inv.water+=2;this._r=`A half-full water container. You fill your bottles and continue on.`}
          else{g.inv.food+=1;this._r=`One can of chickpeas behind a rock. Not much. But something.`}
        },
        get result(){return this._r||'...'}},
@@ -1167,7 +1167,7 @@ const EVENTS = [
        apply(g){g.karma+=8;g.boy.sa=clamp(g.boy.sa+8);g.man.sa=clamp(g.man.sa-6)},
        result:`You scrape a small hole in the ash with your boot. Lay the shoe in it. Cover it.\n\nThe boy says something you don't quite hear. A prayer of some kind. You don't ask him to repeat it.`},
       {text:`Keep walking.`,
-       apply(g){g.boy.sa=clamp(g.boy.sa-8);g.man.sa=clamp(g.man.sa-5)},
+       apply(g){g.boy.sa=clamp(g.boy.sa-8);g.man.sa=clamp(g.man.sa-5);g.progress+=2},
        result:`You walk past it. The boy looks back twice.\n\nYou understand why you had to. You understand it is still wrong.`}
     ]
   },
@@ -1214,7 +1214,7 @@ const EVENTS = [
        apply(g){
          g.scene='house';const r=Math.random();
          if(r>.66){g.inv.food+=3;g.inv.water+=1;this._r=`Mason jars on a shelf. Preserved vegetables, old but sealed. Water in a clay crock, still clean. You fill your containers.`}
-         else if(r>.33){g.inv.food+=2;g.inv.water+=2;this._r=`You find some canned peaches and bottled water hidden behind fallen debris.`}
+         else if(r>.33){g.inv.food+=1;g.inv.water+=3;this._r=`You find a can of peaches and a few bottles of water hidden behind fallen debris.`}
          else if(r>.15){g.man.hp=clamp(g.man.hp-15);this._r=`You fall through rotten floorboards in the dark. The boy hauls you out. You spend the afternoon resting.`}
          else {g.man.hp=clamp(g.man.hp-10);this._r=`You trip in the pitch black cellar, cutting your arm on rusted metal.`}
        },
@@ -1239,11 +1239,11 @@ const EVENTS = [
     choices:[
       {text:'Open it.',
        apply(g){
-         g.scene='bunker';g.day+=2;g.inv.food+=8;g.inv.water+=4;g.inv.medicine+=2;g.man.hp=clamp(g.man.hp+15);g.boy.hp=clamp(g.boy.hp+15);
+         g.scene='bunker';g.day+=2;g.inv.food+=5;g.inv.water+=5;g.inv.medicine+=2;g.man.hp=clamp(g.man.hp+15);g.boy.hp=clamp(g.boy.hp+15);
          g.man.hu=clamp(g.man.hu+25);g.boy.hu=clamp(g.boy.hu+25);g.man.th=clamp(g.man.th+20);g.boy.th=clamp(g.boy.th+20);
          g.man.sa=clamp(g.man.sa+20);g.boy.sa=clamp(g.boy.sa+25);g.karma+=5;
        },
-       result:`A fallout shelter.\n\nShelves of canned food, some rusted through but most intact. Sealed water containers. Blankets. A first aid kit.\n\nYou sit on the floor and the boy laughs—actually laughs—at something, you don't know what. You stay two days.`},
+       result:`A fallout shelter.\n\nShelves of canned food, some rusted through but most intact. Sealed water containers. Blankets. A first aid kit.\n\nYou sit on the floor and the boy laughs—actually laughs—at something, you don't know what.`},
       {text:'Leave it. Might be occupied.',
        apply(g){g.scene='road';g.progress+=3;g.man.sa=clamp(g.man.sa-5)},
        result:`You pull the branches back over it and push on. That night you lie awake thinking about what might have been inside.`}
@@ -1287,7 +1287,7 @@ const EVENTS = [
     narrative:`Something in your hip gives way in the afternoon. An old injury, come back. You limp badly. The boy takes the cart.\n\n"I can push it, Papa."`,
     choices:[
       {text:'Accept his help. Rest tomorrow.',
-       apply(g){g.man.hp=clamp(g.man.hp+8);g.boy.sa=clamp(g.boy.sa+10);g.karma+=5;g.progress-=1},
+       apply(g){g.man.hp=clamp(g.man.hp+8);g.boy.sa=clamp(g.boy.sa+10);g.karma+=5},
        result:`You let him. It is one of the hardest things you've done. He pushes without complaint, smaller than the cart, legs working steadily south.`},
       {text:'Use medicine. Push through.',req:'medicine',
        apply(g){g.inv.medicine--;g.man.hp=clamp(g.man.hp+20);g.progress+=3},
@@ -1330,13 +1330,13 @@ const EVENTS = [
     narrative:`An old man sitting in a lawn chair at the side of the road. Just sitting there. As if waiting for a bus that was never coming.`,
     choices:[
       {text:'Stop. Speak to him.',
-       apply(g){g.man.sa=clamp(g.man.sa+6);g.boy.sa=clamp(g.boy.sa+10);g.karma+=8;g.progress-=1},
+       apply(g){g.man.sa=clamp(g.man.sa+6);g.boy.sa=clamp(g.boy.sa+10);g.karma+=8},
        result:`He said his name was Ely. You sat with him an hour. He said strange things and true things and you weren't always sure which was which.\n\nWhen you left the boy looked back at him three times.`},
       {text:'Give him something and keep moving.', req:'food',
        apply(g){g.inv.food--;g.karma+=10;g.boy.sa=clamp(g.boy.sa+12)},
        result:`You left him a can. He thanked you. The boy waved. The old man watched you go with eyes that had seen everything and none of it mattered anymore.`},
       {text:'Keep moving.',
-       apply(g){g.boy.sa=clamp(g.boy.sa-6);g.karma-=4},
+       apply(g){g.boy.sa=clamp(g.boy.sa-6);g.karma-=4;g.progress+=2},
        result:`You walked past without stopping. The boy looked at the old man as you went.\n\n"Papa, we should—"\n\n"Keep walking."`}
     ]
   },
@@ -1369,10 +1369,10 @@ const EVENTS = [
   },
   {
     id:'cannibalism', weight: (g) => {
-    if (g.man.hu < 15 || g.boy.hu < 15) return 9;  // very likely when critical
-    if (g.man.hu < 30 || g.boy.hu < 30) return 2;   // moderately likely when low
+    if (g.man.hu < 5 || g.boy.hu < 5) return 4;  // likely when critical
+    if (g.man.hu < 15 || g.boy.hu < 15) return 1;  // moderately likely when low
     return 0.3;                                        // rare otherwise
-  }, progress:2,
+    }, progress:2,
     condition: g => g.man.hu < 20 && g.boy.hu < 20,
     narrative:`You hadn't eaten in four days. The boy had stopped asking.\n\nThere was a body in the ditch. Not long dead.\n\nYou stood there a long time. You knew what the question was.`,
     choices:[
@@ -1412,21 +1412,21 @@ function karmaLabel(k) {
 
 function applyDailyDecay() {
   const m = G.man, b = G.boy;
-  m.hu = clamp(m.hu - 6);
-  b.hu = clamp(b.hu - 5);
-  m.th = clamp(m.th - 8);
-  b.th = clamp(b.th - 7);
+  m.hu = clamp(m.hu - (5 + Math.floor(Math.random()*3)));
+  b.hu = clamp(b.hu - (5 + Math.floor(Math.random()*3)));
+  m.th = clamp(m.th - (6 + Math.floor(Math.random()*4)));
+  b.th = clamp(b.th - (6 + Math.floor(Math.random()*4)));
 
   // Daily sanity decrease from monotony
-  m.sa = clamp(m.sa - 3);
-  b.sa = clamp(b.sa - 2);
+  m.sa = clamp(m.sa - (2 + Math.floor(Math.random()*3)));
+  b.sa = clamp(b.sa - (2 + Math.floor(Math.random()*3)));
 
-  if(m.hu < 20) m.hp = clamp(m.hp - 6);
-  if(b.hu < 20) b.hp = clamp(b.hp - 5);
-  if(m.th < 15) m.hp = clamp(m.hp - 9);
-  if(b.th < 15) b.hp = clamp(b.hp - 8);
-  if(m.sa < 20) { if(Math.random()>.5) m.hp = clamp(m.hp - 4); }
-  if(b.sa < 20) { if(Math.random()>.5) b.hp = clamp(b.hp - 4); }
+  if(m.hu < 20) m.hp = clamp(m.hp - (5 + Math.floor(Math.random()*3)));
+  if(b.hu < 20) b.hp = clamp(b.hp - (5 + Math.floor(Math.random()*3)));
+  if(m.th < 15) m.hp = clamp(m.hp - (7 + Math.floor(Math.random()*4)));
+  if(b.th < 15) b.hp = clamp(b.hp - (7 + Math.floor(Math.random()*4)));
+  if(m.sa < 20) { if(Math.random()>.5) m.hp = clamp(m.hp - (2 + Math.floor(Math.random()*4))); }
+  if(b.sa < 20) { if(Math.random()>.5) b.hp = clamp(b.hp - (2 + Math.floor(Math.random()*4))); }
   // weather normalizes
   if(G.weather === 'rain' && Math.random()>.4) G.weather = 'overcast';
   if(G.weather === 'snow' && Math.random()>.35) G.weather = 'overcast';
