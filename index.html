@@ -100,6 +100,14 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 #cutscene-btn.show{opacity:1}
 #cutscene-btn:hover{color:var(--text)}
 
+/* ── SECRET CUTSCENE ── */
+#secret-cutscene-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 40px;background:#050505;text-align:left}
+#secret-cutscene-svg-wrap{width:100%;max-width:680px;margin-bottom:36px}
+#secret-cutscene-text{max-width:540px;font-size:15px;line-height:2.1;color:#888;font-style:italic;white-space:pre-wrap}
+#secret-cutscene-btn{margin-top:40px;background:transparent;border:none;color:var(--dim);font-family:'Courier Prime',monospace;font-size:11px;letter-spacing:.35em;cursor:pointer;text-transform:uppercase;opacity:0;transition:opacity .8s;padding:0}
+#secret-cutscene-btn.show{opacity:1}
+#secret-cutscene-btn:hover{color:var(--text)}
+
 /* ── DEATH ── */
 #death-screen{flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#000;text-align:center; transition: opacity 2s; opacity: 1; z-index: 100}
 #death-text{font-family:'Special Elite',serif;font-size:clamp(18px,4vw,34px);color:#3a3a3a;letter-spacing:.2em;opacity:0;transition:opacity 2.5s}
@@ -302,6 +310,13 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
   <button id="cutscene-btn">— continue —</button>
 </div>
 
+<!-- SECRET CUTSCENE -->
+<div id="secret-cutscene-screen" class="screen">
+  <div id="secret-cutscene-svg-wrap"></div>
+  <div id="secret-cutscene-text"></div>
+  <button id="secret-cutscene-btn">— continue —</button>
+</div>
+
 <!-- DEATH -->
 <div id="death-screen" class="screen">
   <div id="death-text"></div>
@@ -340,6 +355,7 @@ const G = {
   sceneAction: 'idle',
   actionTarget: 'both',
   actionTimer: null,
+  arrowShot: false
 };
 
 const clamp = (v,mn=0,mx=100) => Math.max(mn, Math.min(mx, v));
@@ -611,7 +627,11 @@ function getSceneSVG() {
 // ═══════════════════════════════════════════════
 const EVENTS = [
   {
-    id: 'crit_dehydration', weight: 0, progress: 0, scene: 'road',
+    id: 'crit_dehydration', weight: (g) => {
+    if (g.man.th < 15 || g.boy.th < 15) return 12;  // very likely when critical
+    if (g.man.th < 40 || g.boy.th < 40) return 4;   // moderately likely when low
+    return 0;                                        // doesn't happen otherwise
+  }, progress: 0, scene: 'road',
     narrative: `The thirst is a dry weight in your throat. You stumble over a dry riverbed. There is a small puddle of stagnant, brown water. It smells foul.`,
     choices: [
       {text: 'Drink it anyway. We have to.',
@@ -623,7 +643,11 @@ const EVENTS = [
     ]
   },
   {
-    id: 'crit_starvation', weight: 0, progress: 0, scene: 'road',
+    id: 'crit_starvation', weight: (g) => {
+    if (g.man.hu < 15 || g.boy.hu < 15) return 12;  // very likely when critical
+    if (g.man.hu < 40 || g.boy.hu < 40) return 4;   // moderately likely when low
+    return 0;                                        // doesn't happen otherwise
+  }, progress: 0, scene: 'road',
     narrative: `You have eaten nothing for days. The boy is too weak to walk properly. You spot a dead creature by the road, rotting and swarming with flies.`,
     choices: [
       {text: 'Cook it. Meat is meat.',
@@ -872,7 +896,11 @@ const EVENTS = [
     ]
   },
   {
-    id: 'wild_mushrooms', weight: 1.2, progress: 1, scene: 'road',
+    id: 'wild_mushrooms', weight: (g) => {
+    if (g.man.hu < 15 || g.boy.hu < 15) return 5;
+    if (g.man.hu < 40 || g.boy.hu < 40) return 2;
+    return 1;
+  }, progress: 1, scene: 'road',
     narrative: `Growing in the damp ash beneath a rotting log is a cluster of pale mushrooms. You haven't seen anything alive in weeks.`,
     choices: [
       {text: 'Eat them.',
@@ -939,21 +967,21 @@ const EVENTS = [
     ]
   },  {
     id:'arrow_shot', weight:5, progress:1,
-    condition: g => g.reachedCoast && g.progress > 85,
+    condition: g => g.reachedCoast && g.progress > 85 && !g.arrowShot,
     narrative:`A sudden sharp sound. The man staggered and fell. An arrow in his leg.\n\nSomeone was moving in the ruins of a house above the road. The boy screamed.`,
     choices:[
       {text:'Shoot back with the flare pistol.', req:'flare',
-       apply(g){g.man.hp=clamp(g.man.hp-40);g.karma-=10;g.progress+=1;
+       apply(g){g.arrowShot=true;g.man.hp=clamp(g.man.hp-40);g.karma-=10;g.progress+=1;
          this._r=`You fire the flare into the window. A man screams. The house catches fire quickly in the dry air. You pull the arrow out but the bleeding is bad.`},
        get result(){return this._r||'...'}
       },
       {text:'Shoot back with the pistol.', req:'bullets',
-       apply(g){g.inv.bullets--;g.man.hp=clamp(g.man.hp-40);g.karma-=5;g.progress+=1;
+       apply(g){g.arrowShot=true;g.inv.bullets--;g.man.hp=clamp(g.man.hp-40);g.karma-=5;g.progress+=1;
          this._r=`You fire twice into the window. The movement stops. You break the arrow shaft off. You are losing a lot of blood.`},
        get result(){return this._r||'...'}
       },
       {text:'Hide and bandage it.',
-       apply(g){g.man.hp=clamp(g.man.hp-50);g.boy.sa=clamp(g.boy.sa-15);g.progress+=1;
+       apply(g){g.arrowShot=true;g.man.hp=clamp(g.man.hp-50);g.boy.sa=clamp(g.boy.sa-15);g.progress+=1;
          this._r=`You drag yourself behind a wall. The boy wraps the leg with a dirty cloth. The archer does not pursue, but you are very weak.`},
        get result(){return this._r||'...'}
       }
@@ -1340,7 +1368,11 @@ const EVENTS = [
     ]
   },
   {
-    id:'cannibalism', weight:.3, progress:2,
+    id:'cannibalism', weight: (g) => {
+    if (g.man.hu < 15 || g.boy.hu < 15) return 9;  // very likely when critical
+    if (g.man.hu < 30 || g.boy.hu < 30) return 2;   // moderately likely when low
+    return 0.3;                                        // rare otherwise
+  }, progress:2,
     condition: g => g.man.hu < 20 && g.boy.hu < 20,
     narrative:`You hadn't eaten in four days. The boy had stopped asking.\n\nThere was a body in the ditch. Not long dead.\n\nYou stood there a long time. You knew what the question was.`,
     choices:[
@@ -1418,16 +1450,20 @@ function pickEvent() {
   }
   // filter eligible events
   const pool = EVENTS.filter(e => {
-    if(G.usedEvents.has(e.id) && e.weight < 2) return false;
+    const w = typeof e.weight === 'function' ? e.weight(G) : e.weight;
+    if(G.usedEvents.has(e.id) && w < 2) return false;
     if(e.condition && !e.condition(G)) return false;
     if(e.id === G.lastEvent) return false;
     return true;
   });
   if(!pool.length) return EVENTS[Math.floor(Math.random()*EVENTS.length)];
   // weighted pick
-  const total = pool.reduce((s,e)=>s+e.weight,0);
-  let r = Math.random()*total;
-  for(const e of pool) { r -= e.weight; if(r<=0) return e; }
+  const getWeight = (e) => typeof e.weight === 'function' ? e.weight(G) : e.weight;
+  const total = pool.reduce((s, e) => s + getWeight(e), 0);
+  let r = Math.random() * total;
+  for (const e of pool) {
+   r -= getWeight(e);
+   if (r <= 0) return e; }
   return pool[pool.length-1];
 }
 
@@ -1739,13 +1775,13 @@ The gray beach, the gray sea, the gray sky. The boy stood beside you looking out
 
 The waves came in small and gray and cold. No ships on the water. Nothing on the shore. No warmth in the light at all.
 
-After a long time the boy said: "I thought it would be different."
+You looked at the boy, the disappointment clearly visible on his face. "I'm sorry it's not blue."
 
-"I know."
+"That's okay," said the boy.
 
-"What do we do now, Papa?"
+After a bit, "What are we going to do, Papa?"
 
-"I'm sorry, I'm so sorry." You didn't have an answer. The fire had to be somewhere. It had to.
+You didn't have an answer. The fire had to be somewhere. It had to.
 
 You search a beached ship down the shore and find an Orion flare gun.`;
   const el = document.getElementById('cutscene-text');
@@ -1763,6 +1799,64 @@ function continueAfterCoast() {
   nextTurn();
 }
 
+function triggerSecretEnding() {
+  showScreen('secret-cutscene-screen');
+    document.getElementById('secret-cutscene-svg-wrap').innerHTML = drawBeach();
+
+  const text = `Three days after the man died, the boy had not moved far from the body.
+
+He walked out and looked down the road and he looked back the way they had come.
+
+Then he heard them.
+
+He started to turn and go back but he didn't. He just stood in the road and waited.
+
+A man came around the point of rocks, picking his way carefully. He had a woman with him and two children, a boy and a girl. They stopped when they saw him.
+
+The man knelt down in front of him. He had a beard and his eyes were light-colored and he looked at the boy a long time.
+
+"Are you all right?" he said.
+
+The boy didn't answer.
+
+"Where's the man you were with?"
+
+The boy looked over into the woods. "He died."
+
+"Was that your father?"
+
+"Yes."
+
+The man looked at the woman and then back at the boy.
+
+"I think you should come with me."
+
+"Okay."
+
+He took the boy in his arms and held him. The boy could feel the woman's hand on his back. He was crying but he had no idea when he'd started.
+
+"Is the fire real?" the boy said.
+
+The man pulled back and looked at him.
+
+"Yes," he said. "It is."
+
+"My papa said so."
+
+"Your papa was right."
+
+The boy looked back once down in the trees where the man lay. Then he turned and walked with them down the road into the gray morning.
+
+The fire survived.`;
+
+  const el = document.getElementById('secret-cutscene-text');
+  typewrite(el, text, 22, () => {
+    const btn = document.getElementById('secret-cutscene-btn');
+    btn.classList.add('show');
+    btn.onclick = () => showSummary();
+  });
+}
+
 function triggerDeath() {
   G.over = true;
   showScreen('death-screen');
@@ -1776,10 +1870,23 @@ function triggerDeath() {
   setTimeout(() => {
     document.getElementById('death-screen').style.opacity = '0';
     setTimeout(() => {
+      // CHECK SECRET ENDING CONDITIONS HERE
+      const secretEnding = (
+        G.deathWho === 'man' &&
+        G.boy.hp > 0 &&
+        G.reachedCoast &&
+        G.arrowShot &&
+        G.karma >= 65
+      );
+
+      if (secretEnding) {
+        triggerSecretEnding();
+      } else {
        showSummary();
        document.getElementById('summary-screen').style.opacity = '0';
        document.getElementById('summary-screen').style.transition = 'opacity 2s';
        setTimeout(() => { document.getElementById('summary-screen').style.opacity = '1'; }, 100);
+      }
     }, 2000);
   }, 4200);
 }
@@ -1805,13 +1912,8 @@ function showSummary() {
   } else if(who === 'boy') {
     ending = `He tried to be good. He tried to carry the fire.\n\nIn the end, the road was too long.`;
   } else if(who === 'man') {
-    if(G.reachedCoast && G.boy.hp > 0 && k >= 65) {
+    if(G.reachedCoast && G.boy.hp > 0 && k >= 65 && G.arrowShot === true) {
       ending = `He carried the fire as far as he could. And at the last, it was enough.`;
-      // secret ending
-      document.getElementById('secret-ending').style.display = 'block';
-      typewrite(document.getElementById('secret-ending'),
-        `Three days after the man died, the boy was still by the body when a man came down the beach.\n\nHe had a woman with him and two children.\n\nThe man knelt in front of the boy and looked at him.\n\n"You can come with us," he said. "Do you know how to shoot that pistol?"\n\n"Yes."\n\nHe took the boy in his arms and held him.\n\n"It's all right," the man said. "Everything's all right."\n\nThe boy said: "Is the fire real?"\n\n"Yes it is," said the man. "It was always real."`,
-        25);
     } else {
       ending = `He did what he could. More, perhaps, than could have been asked of him.\n\nThe boy goes on alone.\n\nThe fire may yet survive.`;
     }
@@ -1837,7 +1939,9 @@ document.getElementById('start-btn').addEventListener('click', () => {
           el._skipTypewrite();
       }
   };
-  const intro = `You are the man. When you wake in the woods in the dark and the cold of the night you reach out to touch the boy sleeping beside you.
+  const intro = `You are the man.
+  
+When you wake in the woods in the dark and the cold of the night, you reach out to touch the boy sleeping beside you.
 
 Sleeps that are not like sleep.
 
