@@ -42,8 +42,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 #scene-svg{width:100%;display:block;max-height:260px}
 #day-badge{position:absolute;top:12px;left:16px;font-family:'Special Elite',serif;font-size:12px;letter-spacing:.2em;color:var(--dim)}
 #weather-badge{position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase}
-#mid-row{display:grid;grid-template-columns:1fr 240px;flex:1;min-height:0;overflow:hidden}
-#narrative-col{padding:24px 28px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+#mid-row { display:flex; flex-direction:row; flex:1; min-height:0; overflow:hidden; }
+#narrative-col { padding:24px 28px; border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; overflow-y:auto; flex:1; }
 #narrative-text{font-size:14px;line-height:1.9;color:var(--text);min-height:90px;white-space:pre-wrap;flex:1;margin-bottom:20px}
 #result-text{font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid #222;padding:10px 14px;margin-bottom:16px;line-height:1.8;display:none;white-space:pre-wrap}
 #choices-list{display:flex;flex-direction:column;gap:1px;margin-top:12px;}
@@ -58,7 +58,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .status-ok{color:var(--good)!important}
 
 /* ── STATS ── */
-#stats-col{padding:140px 16px 20px;background:var(--surface);display:block;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain}
+#stats-col { width:260px; padding:20px 16px; background:var(--surface); display:block; min-height:0; overflow-y:auto; flex-shrink:0; }
 .char-block{margin-bottom:16px}
 .char-block h3{font-family:'Special Elite',serif;font-size:10px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
 .stat-row{margin-bottom:8px}
@@ -626,6 +626,49 @@ function getSceneSVG() {
 //  EVENTS
 // ═══════════════════════════════════════════════
 const EVENTS = [
+
+  {
+    id: 'abandoned_cabin_good', weight: 1.5, progress: 2, scene: 'house',
+    narrative: `You find an intact cabin deep in the woods. The door is locked, but you break a window to get in. It seems untouched by scavengers.`,
+    choices: [
+      {text: 'Search the pantry.',
+       apply(g){ g.scene='house'; g.inv.food+=3; g.inv.water+=2; this._r=`You find several cans of soup and bottles of water. A huge relief.` },
+       get result(){return this._r}},
+      {text: 'Search the bathroom.',
+       apply(g){ g.scene='house'; g.inv.medicine+=2; g.inv.food+=1; this._r=`You find a pristine first aid kit and a protein bar.` },
+       get result(){return this._r}}
+    ]
+  },
+  {
+    id: 'clean_stream', weight: 2, progress: 1, scene: 'river',
+    narrative: `You hear the sound of running water. A small stream cuts through the rocks, and miraculously, the water is clear and cold.`,
+    choices: [
+      {text: 'Drink and rest.',
+       apply(g){ g.scene='river'; g.man.th=clamp(g.man.th+40); g.boy.th=clamp(g.boy.th+40); g.inv.water+=3; g.man.hp=clamp(g.man.hp+10); g.boy.hp=clamp(g.boy.hp+10); this._r=`You fill your bottles and drink until you are full. The rest heals your bodies.` },
+       get result(){return this._r}}
+    ]
+  },
+
+
+  {
+    id: 'hallucination_man', weight: (g) => g.man.sa < 25 ? 5 : 0, progress: 0, scene: 'road',
+    narrative: `You see a woman walking ahead of you in a bright yellow dress. It's her. She turns and smiles. You blink and it's just a dead ash tree.`,
+    choices: [
+      {text: 'Shake it off.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-10); this._r=`You wipe your eyes. Your mind is breaking.` },
+       get result(){return this._r}}
+    ]
+  },
+  {
+    id: 'hallucination_boy', weight: (g) => g.boy.sa < 25 ? 5 : 0, progress: 0, scene: 'road',
+    narrative: `The boy stops and points into the dark woods. "Look, Papa. The fire. They have the fire." There is nothing there but darkness.`,
+    choices: [
+      {text: 'Tell him it is nothing.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-10); g.man.sa=clamp(g.man.sa-5); this._r=`He doesn't believe you. He cries for hours.` },
+       get result(){return this._r}}
+    ]
+  },
+
   {
     id: 'crit_dehydration', weight: (g) => {
     if (g.man.th < 5 || g.boy.th < 5) return 12;  // very likely when critical
@@ -1467,38 +1510,28 @@ function pickEvent() {
   return pool[pool.length-1];
 }
 
-function useSupply(type, who) {
-  if(G.over || G.awaitingContinue) return;
-  const inv = G.inv;
-  const char = who === 'man' ? G.man : G.boy;
-  const name = who === 'man' ? 'You' : 'The Boy';
 
-  if(type==='food' && char.hu >= 100) return;
-  if(type==='water' && char.th >= 100) return;
-  if(type==='medicine' && char.hp >= 100) return;
-
-  if(type==='food' && inv.food > 0) {
-    inv.food--;
-    char.hu = clamp(char.hu + 32);
-    char.hp = clamp(char.hp + 4);
-    showStatus(`${name} ate food. Hunger restored.`, 'ok');
-    triggerSceneAction('eat', who, 900);
-  } else if(type==='water' && inv.water > 0) {
-    inv.water--;
-    char.th = clamp(char.th + 32);
-    char.hp = clamp(char.hp + 2);
-    showStatus(`${name} drank water. Thirst restored.`, 'ok');
-    triggerSceneAction('drink', who, 900);
-  } else if(type==='medicine' && inv.medicine > 0) {
-    inv.medicine--;
-    char.hp = clamp(char.hp + 45);
-    char.sa = clamp(char.sa + 10);
-    showStatus(`${name} used medicine. Health restored.`, 'ok');
-    triggerSceneAction('meds', who, 900);
-  }
+function useSupply(type, char) {
+  if (G.inv[type] <= 0) return;
+  if(type==='food'){ G.inv.food--; if(char==='man'){G.man.hu+=30;G.man.hp+=5}else{G.boy.hu+=30;G.boy.hp+=5} }
+  if(type==='water'){ G.inv.water--; if(char==='man'){G.man.th+=30;G.man.hp+=5}else{G.boy.th+=30;G.boy.hp+=5} }
+  if(type==='medicine'){ G.inv.medicine--; if(char==='man'){G.man.hp+=40;G.man.sa+=10}else{G.boy.hp+=40;G.boy.sa+=10} }
+  G.man.hu=clamp(G.man.hu); G.boy.hu=clamp(G.boy.hu);
+  G.man.th=clamp(G.man.th); G.boy.th=clamp(G.boy.th);
+  G.man.hp=clamp(G.man.hp); G.boy.hp=clamp(G.boy.hp);
+  G.man.sa=clamp(G.man.sa); G.boy.sa=clamp(G.boy.sa);
+  triggerSceneAction('heal', char);
+  G.supplyUsedThisTurn = true;
   renderStats();
   renderInv();
+
+  // Re-render choices to lock any that now lack resources
+  const ev = EVENTS.find(e => e.id === G.lastEvent);
+  if (ev && !G.awaitingContinue && !G.over) {
+    showChoices(ev);
+  }
 }
+
 
 function showStatus(msg, type='') {
   const el = document.getElementById('status-line');
@@ -1801,7 +1834,7 @@ function continueAfterCoast() {
 
 function triggerSecretEnding() {
   showScreen('secret-cutscene-screen');
-    document.getElementById('secret-cutscene-svg-wrap').innerHTML = drawBeach();
+    document.getElementById('secret-cutscene-svg-wrap').innerHTML = drawRoad('clear');
 
   const text = `Three days after the man died, the boy had not moved far from the body.
 
@@ -1906,18 +1939,37 @@ function showSummary() {
     <div class="sum-row"><span class="sum-key">Boy's final health</span><span class="sum-val">${Math.max(0,Math.round(G.boy.hp))}</span></div>
   `;
 
+  
   let ending = '';
+  let karmaText = k >= 70 ? 'You kept your humanity.' : k >= 40 ? 'You did what you had to do.' : 'You became the monster you feared.';
   if(who === 'both') {
-    ending = `They walked until they could not walk any further. What they carried they carried to the end.\n\nThe fire went out.`;
+    ending = `They walked until they could not walk any further. What they carried they carried to the end.
+
+The fire went out.
+
+${karmaText}`;
   } else if(who === 'boy') {
-    ending = `He tried to be good. He tried to carry the fire.\n\nIn the end, the road was too long.`;
+    ending = `He tried to be good. He tried to carry the fire.
+
+In the end, the road was too long.
+
+${karmaText}`;
   } else if(who === 'man') {
-    if(G.reachedCoast && G.boy.hp > 0 && k >= 65 && G.arrowShot === true) {
-      ending = `He carried the fire as far as he could. And at the last, it was enough.`;
+    if(G.reachedCoast && G.boy.hp > 0 && k >= 50 && G.arrowShot === true) {
+      ending = `He carried the fire as far as he could. And at the last, it was enough.
+
+${karmaText}`;
     } else {
-      ending = `He did what he could. More, perhaps, than could have been asked of him.\n\nThe boy goes on alone.\n\nThe fire may yet survive.`;
+      ending = `He did what he could. More, perhaps, than could have been asked of him.
+
+The boy goes on alone.
+
+The fire may yet survive.
+
+${karmaText}`;
     }
   }
+
   document.getElementById('ending-text').textContent = ending;
 }
 
