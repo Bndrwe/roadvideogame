@@ -37,13 +37,13 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 
 
 /* ── GAME ── */
-#game-screen{flex-direction:column;height:100vh;max-width:980px;margin:0 auto;width:100%;overflow:hidden}
-#scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505;max-height:160px;overflow:hidden}
-#scene-svg{width:100%;display:block;height:160px;object-fit:cover}
+#game-screen{flex-direction:column;min-height:100vh;max-width:980px;margin:0 auto;width:100%;overflow-y:auto}
+#scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505}
+#scene-svg{width:100%;display:block}
 #day-badge{position:absolute;top:12px;left:16px;font-family:'Special Elite',serif;font-size:12px;letter-spacing:.2em;color:var(--dim)}
 #weather-badge{position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase}
-#mid-row { display:flex; flex-direction:row; flex:1; min-height:0; overflow:hidden; }
-#narrative-col { padding:24px 28px; border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; overflow-y:auto; flex:1; }
+#mid-row{display:flex;flex-direction:row;width:100%;}
+#narrative-col{padding:24px 28px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex:1;}
 #narrative-text{font-size:14px;line-height:1.9;color:var(--text);min-height:90px;white-space:pre-wrap;flex:1;margin-bottom:20px}
 #result-text{font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid #222;padding:10px 14px;margin-bottom:16px;line-height:1.8;display:none;white-space:pre-wrap}
 #choices-list{display:flex;flex-direction:column;gap:1px;margin-top:12px;}
@@ -58,7 +58,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 .status-ok{color:var(--good)!important}
 
 /* ── STATS ── */
-#stats-col { width:260px; padding:20px 16px; background:var(--surface); display:block; min-height:0; overflow-y:auto; flex-shrink:0; }
+#stats-col{width:260px;padding:20px 16px;background:var(--surface);display:block;flex-shrink:0;}
 .char-block{margin-bottom:16px}
 .char-block h3{font-family:'Special Elite',serif;font-size:10px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
 .stat-row{margin-bottom:8px}
@@ -661,7 +661,10 @@ const EVENTS = [
     narrative: `You see a woman walking ahead of you in a bright yellow dress. It's her. She turns and smiles. You blink and it's just a dead ash tree.`,
     choices: [
       {text: 'Shake it off.',
-       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-10); this._r=`You wipe your eyes. Your mind is breaking.` },
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-5); this._r=`You wipe your eyes. Your mind is breaking.` },
+       get result(){return this._r}},
+      {text: 'Try to bring her back.',
+       apply(g){ g.scene='road'; g.man.sa=clamp(g.man.sa-20); g.man.hp=clamp(g.man.hp-8); this._r=`She's right in front of you. You run to her, only to hit your head against a tree. Your mind is breaking.` },
        get result(){return this._r}}
     ]
   },
@@ -671,6 +674,9 @@ const EVENTS = [
     choices: [
       {text: 'Tell him it is nothing.',
        apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-10); g.man.sa=clamp(g.man.sa-5); this._r=`He doesn't believe you. He cries for hours.` },
+       get result(){return this._r}},
+      {text: 'Ask him to show you.',
+       apply(g){ g.scene='road'; g.boy.sa=clamp(g.boy.sa-20); g.man.sa=clamp(g.man.sa-10); g.boy.hp=clamp(g.boy.hp-8); this._r=`He runs forward into the darkness, only to trip and fall into the dirt. He cries for hours.` },
        get result(){return this._r}}
     ]
   },
