@@ -38,8 +38,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'C
 
 /* ── GAME ── */
 #game-screen{flex-direction:column;height:100vh;max-width:980px;margin:0 auto;width:100%;overflow:hidden}
-#scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505}
-#scene-svg{width:100%;display:block;max-height:180px}
+#scene-wrap{position:relative;border-bottom:1px solid var(--border);flex-shrink:0;background:#050505;max-height:160px;overflow:hidden}
+#scene-svg{width:100%;display:block;height:160px;object-fit:cover}
 #day-badge{position:absolute;top:12px;left:16px;font-family:'Special Elite',serif;font-size:12px;letter-spacing:.2em;color:var(--dim)}
 #weather-badge{position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase}
 #mid-row { display:flex; flex-direction:row; flex:1; min-height:0; overflow:hidden; }
@@ -339,7 +339,7 @@ const G = {
   day: 1,
   man: {hp:80, hu:70, th:70, sa:90},
   boy: {hp:85, hu:75, th:75, sa:80},
-  inv: {food:3, water:2, medicine:1, bullets:6, flare:1},
+  inv: {food:3, water:2, medicine:1, bullets:6, flare:0},
   karma: 50,
   progress: 0,
   reachedCoast: false,
@@ -754,7 +754,7 @@ const EVENTS = [
     ]
   },
   {
-    id: 'stray_dog', weight: 0.8, progress: 1, scene: 'road',
+    id: 'stray_dog_following', weight: 0.8, progress: 1, scene: 'road',
     narrative: `A starving dog follows you at a distance. Ribs showing, tail tucked. It stops when you stop.`,
     choices: [
       {text: 'Throw it some food. (-1 Food)',
@@ -987,23 +987,26 @@ const EVENTS = [
     ]
   },
   {
-    id: 'thief_on_beach', weight: 5, progress: 95, scene: 'beach',
-    condition: g => g.reachedCoast,
+    id: 'thief_on_beach', weight: 5, progress: 2, scene: 'beach',
+    condition: g => g.reachedCoast && !g.usedEvents.has('thief_on_beach'),
     narrative: `You leave the boy sick in the dunes while you walk. When you return, a ragged man has his hands on your cart. He holds a knife.`,
     choices: [
       {text: 'Draw your pistol and make him strip.', req:'bullets',
-       apply(g){ g.inv.bullets--; g.man.sa=clamp(g.man.sa-10); g.boy.sa=clamp(g.boy.sa-20); g.karma-=20; this._r=`"Take your clothes off," you say. You take everything he has. The boy cries for you not to do it. You leave the man naked on the cold beach to die.` },
+       apply(g){ g.man.sa=clamp(g.man.sa-10); g.boy.sa=clamp(g.boy.sa-15); g.karma-=20; this._r=`"Take your clothes off," you say. You take everything he has. The boy cries for you not to do it. You leave the man naked on the cold beach to die.` },
        get result(){return this._r||'...'} },
       {text: 'Shoot him dead.', req:'bullets',
        apply(g){ g.inv.bullets--; g.man.sa=clamp(g.man.sa-20); g.boy.sa=clamp(g.boy.sa-25); g.karma-=30; this._r=`You don't hesitate. You shoot him in the chest. He falls in the sand. The boy is terrified of you.` },
        get result(){return this._r||'...'} },
-      {text: 'Let him take some food and leave.',
+      {text: 'Let him take some food and leave.', req:'food',
        apply(g){ g.inv.food = Math.max(0, g.inv.food-2); g.boy.sa=clamp(g.boy.sa+10); g.karma+=15; this._r=`You lower the gun. He takes a few cans and runs. The boy is thankful you didn't kill him.` },
+       get result(){return this._r||'...'} },
+      {text: 'Beg for mercy.',
+       apply(g){ g.inv.food = 0; g.inv.water = 0; g.inv.medicine = 0; g.inv.bullets = 0; g.inv.flare = 0; g.man.hp=clamp(g.man.hp-20); g.man.sa=clamp(g.man.sa-10); g.boy.sa=clamp(g.boy.sa-10); this._r=`He takes everything. He even slashes you across the leg, for good measure.` },
        get result(){return this._r||'...'} }
     ]
   },
   {
-    id: 'ship_on_beach', weight: 5, progress: 90, scene: 'beach',
+    id: 'ship_on_beach', weight: 5, progress: 2, scene: 'beach',
     condition: g => g.reachedCoast && !g.usedEvents.has('ship_on_beach'),
     narrative: `A massive, rusted cargo ship lies washed up on the gray sand. The Spanish name "Pajaro de Esperanza" is faintly visible on the bow.`,
     choices: [
@@ -1016,11 +1019,11 @@ const EVENTS = [
     ]
   },  {
     id:'arrow_shot', weight:5, progress:1,
-    condition: g => g.reachedCoast && g.progress > 85 && !g.arrowShot,
+    condition: g => g.reachedCoast && g.progress > 90 && !g.arrowShot,
     narrative:`A sudden sharp sound. The man staggered and fell. An arrow in his leg.\n\nSomeone was moving in the ruins of a house above the road. The boy screamed.`,
     choices:[
       {text:'Shoot back with the flare pistol.', req:'flare',
-       apply(g){g.arrowShot=true;g.man.hp=clamp(g.man.hp-40);g.karma-=10;g.progress+=1;
+       apply(g){g.arrowShot=true;g.inv.flare--;g.man.hp=clamp(g.man.hp-40);g.karma-=10;g.progress+=1;
          this._r=`You fire the flare into the window. A man screams. The house catches fire quickly in the dry air. You pull the arrow out but the bleeding is bad.`},
        get result(){return this._r||'...'}
       },
@@ -1797,6 +1800,7 @@ function nextTurn() {
 function triggerCoast() {
   G.reachedCoast = true;
   G.scene = 'beach';
+  G.inv.flare += 1;
   renderScene();
   showScreen('cutscene-screen');
   document.getElementById('cutscene-svg-wrap').innerHTML = drawBeach();
